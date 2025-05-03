@@ -25,6 +25,4 @@ export default function initializeBaseConfigForApp(app: express.Express) {
     res.setHeader("X-Powered-By", "Chat Server");
     next();
   });
-
-
 }
