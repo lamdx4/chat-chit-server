@@ -1,10 +1,14 @@
 import { Request, Response, NextFunction, RequestHandler } from "express";
 
-const asyncUtil = <Req = Request, Res = Response, Next = NextFunction>(
-  fn: (req: Req, res: Res, next: Next) => Promise<unknown>
+const asyncUtil = (
+  fn: (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => Promise<unknown> | unknown
 ): RequestHandler =>
   function asyncUtilWrap(req, res, next) {
-    Promise.resolve(fn(req as Req, res as Res, next as Next)).catch(next);
+    Promise.resolve(fn(req, res, next)).catch(next);
   };
 
 export default asyncUtil;
