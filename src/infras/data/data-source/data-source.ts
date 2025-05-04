@@ -1,13 +1,14 @@
 import { DataSource } from "typeorm";
 import path from "path";
+import { ConfigService } from "../../../shared-kernel/env/config-service";
 
 const AppDataSource = new DataSource({
   type: "mysql",
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT),
-  username: process.env.DB_USERNAME,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
+  host: ConfigService.tryGet("DB_HOST"),
+  port: Number(ConfigService.tryGet("DB_PORT")),
+  username: ConfigService.tryGet("DB_USERNAME"),
+  password: ConfigService.tryGet("DB_PASSWORD"),
+  database: ConfigService.tryGet("DB_DATABASE"),
   entities: [path.join(__dirname, "../../../core/entities/*.entity.{js,ts}")],
   synchronize: true,
   subscribers: [path.join(__dirname, "./subscribers/**/*.subscriber.{js,ts}")],

@@ -54,7 +54,7 @@ const handleValidationErrors = (
     }
   }
 
-  return res
+  res
     .status(400)
     .json(ResponseData.fail("VALIDATE_ERROR", formattedErrors));
 };

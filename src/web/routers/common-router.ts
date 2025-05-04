@@ -1,9 +1,9 @@
 import { Router } from "express";
 
-import AuthController from "../controllers/auth/auth.controller";
+import authRouter from "../controllers/auth/auth.route";
 
 const routerCommon = Router();
 
-routerCommon.use("/auth", new AuthController(routerCommon).getRouter());
+routerCommon.use("/auth", authRouter);
 
 export default routerCommon;
