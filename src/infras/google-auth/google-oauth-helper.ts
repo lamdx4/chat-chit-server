@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from "axios";
 import jwt, { JwtHeader, JwtPayload } from "jsonwebtoken";
 import { JwksClient, JwksError, SigningKey } from "jwks-rsa";
 import { URLSearchParams } from "url";
+import { ConfigService } from "../../shared-kernel/env/config-service";
 
 // Interfaces tương ứng với C# DTOs
 export interface GoogleOAuth2Setting {
@@ -144,10 +145,10 @@ export class GoogleOAuth2Config implements GoogleOAuth2Setting {
   ClientSecret: string;
   RedirectUri: string;
 
-  constructor(clientId: string, clientSecret: string, redirectUri: string) {
-    this.ClientId = clientId;
-    this.ClientSecret = clientSecret;
-    this.RedirectUri = redirectUri;
+  constructor() {
+    this.ClientId = ConfigService.tryGet("GOOGLE_CLIENT_ID");
+    this.ClientSecret = ConfigService.tryGet("GOOGLE_CLIENT_SECRET");
+    this.RedirectUri = ConfigService.tryGet("GOOGLE_REDIRECT_URI");
   }
 
   public getRedirectUri(userId: number): string {
