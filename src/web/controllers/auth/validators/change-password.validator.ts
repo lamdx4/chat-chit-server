@@ -1,9 +1,9 @@
 import { body } from "express-validator";
 
 export const changePasswordValidator = [
-  body("OldPassword").notEmpty().withMessage("Old password is required."),
+  body("oldPassword").notEmpty().withMessage("Old password is required."),
 
-  body("NewPassword")
+  body("newPassword")
     .notEmpty()
     .withMessage("New password is required.")
     .isLength({ min: 8, max: 40 })

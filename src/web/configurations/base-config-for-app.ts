@@ -3,14 +3,21 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
-import logger from "../../shared-kernel/logger/logger";
-import { ResponseData } from "../utils/response-data";
+import path from "path";
+import { ConfigService } from "../../shared-kernel/env/config-service";
 
 export default function initializeBaseConfigForApp(app: express.Express) {
-  
-  app.use(cors());
+  app.use(
+    cors({
+      origin: ConfigService.tryGet("CORS_ORIGIN"),
+    })
+  );
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    })
+  );
 
   app.use(morgan("combined"));
 
@@ -18,7 +25,13 @@ export default function initializeBaseConfigForApp(app: express.Express) {
 
   app.use(express.urlencoded({ extended: true }));
 
-  app.use(express.static("public"));
+  app.use(
+    "/files",
+    cors({
+      origin: ConfigService.tryGet("CORS_ORIGIN"),
+    }),
+    express.static(path.resolve(__dirname, "../../../uploads"))
+  );
 
   app.use(compression());
 

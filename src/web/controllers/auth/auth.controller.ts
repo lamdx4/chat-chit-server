@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import AuthService from "../../../application/auth/auth.service";
 import { ResponseData } from "../../utils/response-data";
 import { HttpStatus } from "../../utils/http-status-code";
-import RegisterDto from "../dtos/register.dto";
+import RegisterDto from "./dtos/register.dto";
 
 export default class AuthController {
   private authService: AuthService;
@@ -20,7 +20,7 @@ export default class AuthController {
     if (r.isSuccess) {
       res
         .status(HttpStatus.Ok)
-        .json(ResponseData.success(r.data, "Change password success"));
+        .json(ResponseData.success(r.data));
     } else {
       res.status(r.code).json(ResponseData.fail(r.message, r.errors));
     }

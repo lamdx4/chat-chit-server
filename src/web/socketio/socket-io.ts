@@ -14,6 +14,10 @@ export default function createSocketIo(
     port: Number(ConfigService.tryGet("REDIS_ADAPTER_SOCKET_PORT")),
   });
   const io = new Server(server, {
+    cors: {
+      origin: ConfigService.tryGet("CORS_ORIGIN"),
+      credentials: true,
+    },
     adapter: createAdapter(redisClient),
   });
   return io;

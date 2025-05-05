@@ -43,6 +43,19 @@ export class Result<T = void> {
     return new Result<T>(false, code, message, undefined);
   }
 
+  static conflict<T = void>(
+    message = "Conflict",
+    errors: Errors = {}
+  ): Result<T> {
+    return new Result<T>(
+      false,
+      HttpStatus.Conflict,
+      message,
+      undefined,
+      errors
+    );
+  }
+
   static notFound<T = void>(message: string, errors: Errors = {}): Result<T> {
     return new Result<T>(
       false,

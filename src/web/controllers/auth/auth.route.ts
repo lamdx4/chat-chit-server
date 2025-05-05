@@ -39,7 +39,7 @@ authRouter.post(
   asyncUtil(authController.forgotPassword.bind(authController))
 );
 
-authRouter.post(
+authRouter.put(
   "/change-password",
   changePasswordValidator,
   handleValidationErrors,
