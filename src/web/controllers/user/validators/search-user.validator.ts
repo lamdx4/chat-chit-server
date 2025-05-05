@@ -1,4 +1,4 @@
-import { query } from "winston"
+import { query } from "express-validator"
 
 const searchUserValidator = [
     query("phone").optional().isString().withMessage("Phone must be a string"),

@@ -1,7 +1,7 @@
-import { body } from "express-validator";
+// import { body } from "express-validator";
 
-const changeAvatarValidator = [
+// const changeAvatarValidator = [
 
-];
+// ];
 
-export default changeAvatarValidator;
+// export default changeAvatarValidator;
