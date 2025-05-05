@@ -1,5 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import AuthService from "../../../application/auth.service";
+import AuthService from "../../../application/auth/auth.service";
+import { ResponseData } from "../../utils/response-data";
+import { HttpStatus } from "../../utils/http-status-code";
+import RegisterDto from "../dtos/register.dto";
 
 export default class AuthController {
   private authService: AuthService;
@@ -7,29 +10,68 @@ export default class AuthController {
     this.authService = new AuthService();
   }
 
-  resetPassword(req: Request, res: Response, next: NextFunction) {
-    throw new Error("Method not implemented.");
+  async changePassword(req: Request, res: Response, next: NextFunction) {
+    const { oldPassword, newPassword } = req.body;
+    const r = await this.authService.changePassword(
+      req.userId!,
+      oldPassword,
+      newPassword
+    );
+    if (r.isSuccess) {
+      res
+        .status(HttpStatus.Ok)
+        .json(ResponseData.success(r.data, "Change password success"));
+    } else {
+      res.status(r.code).json(ResponseData.fail(r.message, r.errors));
+    }
   }
+
   forgotPassword(req: Request, res: Response, next: NextFunction) {
     throw new Error("Method not implemented.");
   }
+
   refreshToken(req: Request, res: Response, next: NextFunction) {
-    throw new Error("Method not implemented.");
+    
   }
+
   logout(req: Request, res: Response, next: NextFunction) {
     throw new Error("Method not implemented.");
   }
 
-  register(req: Request, res: Response, next: NextFunction) {
-    throw new Error("Method not implemented.");
+  async register(req: Request, res: Response, next: NextFunction) {
+    const registerDto: RegisterDto = req.body;
+    const r = await this.authService.register(
+      registerDto.phone,
+      registerDto.fullName,
+      registerDto.password,
+      registerDto.userName
+    );
+    if (r.isSuccess) {
+      res
+        .status(HttpStatus.Ok)
+        .json(ResponseData.success(r.data, "Register success"));
+    } else {
+      res.status(r.code).json(ResponseData.fail(r.message, r.errors));
+    }
   }
 
-  login(req: Request, res: Response, next: NextFunction) {
+  async login(req: Request, res: Response, next: NextFunction) {
     const deviceLoginInfor = `[${new Date()}] [${req.headers["user-agent"]}] [${
       req.headers["x-forwarded-for"] || req.socket.remoteAddress
     }]`;
     const { identifier, password } = req.body;
-    const r = this.authService.login(identifier, password, deviceLoginInfor);
-    // res.status(200).json({
+    const r = await this.authService.login(
+      identifier,
+      password,
+      deviceLoginInfor
+    );
+    if (r.isSuccess) {
+      res
+        .status(HttpStatus.Ok)
+        .json(ResponseData.success(r.data, "Login success"));
+    } else {
+      res.status(r.code).json(ResponseData.fail(r.message, r.errors));
+    }
   }
+
 }

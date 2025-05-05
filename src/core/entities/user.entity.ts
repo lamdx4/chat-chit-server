@@ -59,6 +59,9 @@ export class User {
   @Column("tinyint", { default: 1 })
   isActive: boolean;
 
+  @Column({ type: "datetime", default: () => "CURRENT_TIMESTAMP" })
+  createdAt: Date;
+
   @OneToMany(() => Member, (member) => member.user)
   members: Member[];
 

@@ -9,7 +9,6 @@ import {
 import { User } from "./user.entity";
 
 @Entity({ name: "Token" })
-@Index("userId", ["userId"])
 export class Token {
   @PrimaryGeneratedColumn()
   id: number;

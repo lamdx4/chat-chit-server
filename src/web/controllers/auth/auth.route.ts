@@ -5,8 +5,10 @@ import loginValidator from "./validators/login.validator";
 import handleValidationErrors from "../../utils/handle-validation-errors";
 import registerValidator from "./validators/registetr.validator";
 import asyncUtil from "../../utils/async-wrapper";
+import { changePasswordValidator } from "./validators/change-password.validator";
 
 let authRouter = Router();
+
 
 const authController = new AuthController();
 
@@ -14,18 +16,34 @@ authRouter.post(
   "/login",
   loginValidator,
   handleValidationErrors,
-  authController.login
+  asyncUtil(authController.login.bind(authController))
 );
 
 authRouter.post(
   "/register",
   registerValidator,
-  asyncUtil(authController.register)
+  handleValidationErrors,
+  asyncUtil(authController.register.bind(authController))
 );
 
-authRouter.post("/logout", asyncUtil(authController.logout));
-authRouter.post("/refresh-token", asyncUtil(authController.refreshToken));
-authRouter.post("/forgot-password", asyncUtil(authController.forgotPassword));
-authRouter.post("/reset-password", asyncUtil(authController.resetPassword));
+authRouter.post(
+  "/logout",
+  asyncUtil(authController.logout.bind(authController))
+);
+authRouter.post(
+  "/refresh-token",
+  asyncUtil(authController.refreshToken.bind(authController))
+);
+authRouter.post(
+  "/forgot-password",
+  asyncUtil(authController.forgotPassword.bind(authController))
+);
+
+authRouter.post(
+  "/change-password",
+  changePasswordValidator,
+  handleValidationErrors,
+  asyncUtil(authController.changePassword.bind(authController))
+);
 
 export default authRouter;

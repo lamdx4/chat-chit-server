@@ -1,5 +1,8 @@
 export type ErrorResponses = Record<string, string[]>;
 
+/**
+ * Base class for all API responses.
+ */
 export abstract class ResponseBase {
   readonly isSuccess: boolean;
   readonly message: string;
@@ -16,55 +19,48 @@ export abstract class ResponseBase {
   }
 }
 
-export class ResponseData extends ResponseBase {
-  readonly data: object;
+/**
+ * Generic response class for client data responses.
+ * Use ResponseData<T>.success(data) and ResponseData<T>.fail(...) for convenience.
+ */
+export class ResponseData<T = void> extends ResponseBase {
+  readonly data?: T;
 
-  protected constructor(
+  private constructor(
     isSuccess: boolean,
     message: string = "",
     errors: ErrorResponses = {},
-    data: object = {}
+    data?: T
   ) {
     super(isSuccess, message, errors);
     this.data = data;
   }
 
-  static success(message: string = "Success"): ResponseData {
-    return new ResponseData(true, message, {}, {});
+  /**
+   * Success response with optional data and custom message.
+   */
+  static success<T = void>(data?: T, message = "Success"): ResponseData<T> {
+    return new ResponseData<T>(true, message, {}, data);
   }
 
-  static fail(
-    message: string = "Error",
-    errors: ErrorResponses = {}
-  ): ResponseData {
-    return new ResponseData(false, message, errors, {});
-  }
-}
-
-export class ResponseDataGeneric<T extends object> extends ResponseBase {
-  readonly data: T;
-
-  protected constructor(
-    isSuccess: boolean,
-    message: string = "",
-    data: T,
-    errors: ErrorResponses = {}
-  ) {
-    super(isSuccess, message, errors);
-    this.data = data;
+  /**
+   * Failure response with optional errors and custom message.
+   */
+  static fail<T = void>(message = "Error", errors: ErrorResponses = {}): ResponseData<T> {
+    return new ResponseData<T>(false, message, errors);
   }
 
-  static success<T extends object>(
-    data: T,
-    message: string = "Success"
-  ): ResponseDataGeneric<T> {
-    return new ResponseDataGeneric<T>(true, message, data, {});
+  /**
+   * Type guard for success with data.
+   */
+  isOk(): this is { isSuccess: true; data: T } {
+    return this.isSuccess;
   }
 
-  static fail<T extends object>(
-    message: string = "Error",
-    errors: ErrorResponses = {}
-  ): ResponseDataGeneric<T> {
-    return new ResponseDataGeneric<T>(false, message, {} as T, errors);
+  /**
+   * Type guard for failure.
+   */
+  isFail(): this is { isSuccess: false; errors: ErrorResponses } {
+    return !this.isSuccess;
   }
 }

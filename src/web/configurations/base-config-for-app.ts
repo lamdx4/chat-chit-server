@@ -7,6 +7,7 @@ import logger from "../../shared-kernel/logger/logger";
 import { ResponseData } from "../utils/response-data";
 
 export default function initializeBaseConfigForApp(app: express.Express) {
+  
   app.use(cors());
 
   app.use(helmet());
