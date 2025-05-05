@@ -12,14 +12,14 @@ export interface GoogleOAuth2Setting {
 }
 
 export interface TokenResponse {
-  AccessToken: string;
-  IdToken: string;
+  token_type: string;
+  id_token: string;
 }
 
 export interface GoogleUserInfo {
-  AccountId: string;
-  Email: string;
-  Name: string;
+  account_id: string;
+  email: string;
+  name: string;
 }
 
 export class GoogleOAuthHelper {
@@ -32,19 +32,37 @@ export class GoogleOAuthHelper {
     });
   }
 
+  public getRedirectUri(userId: number): string {
+    const params = new URLSearchParams({
+      client_id: this.options.ClientId,
+      redirect_uri: this.options.RedirectUri,
+      response_type: "code",
+      scope: "profile email",
+      state: userId.toString(),
+    });
+
+    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  }
+
   public async getUserInfoFromCodeAsync(code: string): Promise<GoogleUserInfo> {
     const tokenResponse = await this.exchangeCodeForTokensAsync(code);
 
-    if (!tokenResponse.IdToken) {
+    if (!tokenResponse.id_token) {
       throw new Error("No id_token returned from Google.");
     }
 
-    return this.validateAndParseIdTokenAsync(tokenResponse.IdToken);
+    return this.validateAndParseIdTokenAsync(tokenResponse.id_token);
   }
 
+  // Sửa phương thức exchangeCodeForTokensAsync
   private async exchangeCodeForTokensAsync(
     code: string
   ): Promise<TokenResponse> {
+    // Validate code first
+    if (!code || code === "undefined") {
+      throw new Error("Invalid authorization code");
+    }
+
     const params = new URLSearchParams({
       code,
       client_id: this.options.ClientId,
@@ -53,26 +71,24 @@ export class GoogleOAuthHelper {
       grant_type: "authorization_code",
     });
 
-    const response = await GoogleOAuthHelper.httpClient.post<TokenResponse>(
-      "https://oauth2.googleapis.com/token",
-      params.toString(),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    );
-
-    if (response.status !== 200) {
-      throw new Error(
-        `Failed to exchange code: ${JSON.stringify(response.data)}`
+    try {
+      const response = await GoogleOAuthHelper.httpClient.post<TokenResponse>(
+        "https://oauth2.googleapis.com/token",
+        params.toString(),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
       );
-    }
 
-    return {
-      AccessToken: response.data.AccessToken,
-      IdToken: response.data.IdToken,
-    };
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Google API Error Details:", error.response?.data);
+      }
+      throw new Error("Failed to exchange authorization code for tokens");
+    }
   }
 
   private async validateAndParseIdTokenAsync(
@@ -132,34 +148,9 @@ export class GoogleOAuthHelper {
     }
 
     return {
-      AccountId: accountId,
-      Email: email,
-      Name: name,
+      account_id: accountId,
+      email: email,
+      name: name,
     };
-  }
-}
-
-// Utility class cho GoogleOAuth2Setting
-export class GoogleOAuth2Config implements GoogleOAuth2Setting {
-  ClientId: string;
-  ClientSecret: string;
-  RedirectUri: string;
-
-  constructor() {
-    this.ClientId = ConfigService.tryGet("GOOGLE_CLIENT_ID");
-    this.ClientSecret = ConfigService.tryGet("GOOGLE_CLIENT_SECRET");
-    this.RedirectUri = ConfigService.tryGet("GOOGLE_REDIRECT_URI");
-  }
-
-  public getRedirectUri(userId: number): string {
-    const params = new URLSearchParams({
-      client_id: this.ClientId,
-      redirect_uri: this.RedirectUri,
-      response_type: "code",
-      scope: "profile email",
-      state: userId.toString(),
-    });
-
-    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
 }
