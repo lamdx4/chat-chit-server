@@ -4,7 +4,6 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
-  Index,
 } from "typeorm";
 import { User } from "./user.entity";
 

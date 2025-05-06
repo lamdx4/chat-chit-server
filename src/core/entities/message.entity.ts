@@ -6,10 +6,13 @@ import {
   OneToMany,
   Index,
   JoinColumn,
+  OneToOne,
 } from "typeorm";
 import { Member } from "./member.entity";
 import { Reaction } from "./reaction.entity";
 import { ManipulateMember } from "./manipulate-member.entity";
+import { File } from "./file.entity";
+import { Poll } from "./poll.entity";
 
 export enum MessageType {
   Text = "Text",
@@ -53,6 +56,13 @@ export class Message {
   @Column()
   memberId: number;
 
+  @Column()
+  fileId: number;
+
+  @OneToOne(() => File, (file) => file.message, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "avatar" })
+  messageFile: File;
+
   @ManyToOne(() => Member, (member) => member.messages, { onDelete: "CASCADE" })
   @JoinColumn({ name: "memberId" })
   ownerMemberId: Member;
@@ -72,4 +82,7 @@ export class Message {
     (manipulateMember) => manipulateMember.member
   )
   manipulateMembers: ManipulateMember[];
+
+  @OneToOne(() => Poll, (poll) => poll.message)
+  poll: Poll;
 }

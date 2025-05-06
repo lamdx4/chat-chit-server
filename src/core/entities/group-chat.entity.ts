@@ -5,9 +5,12 @@ import {
   Column,
   OneToMany,
   Index,
+  OneToOne,
+  JoinColumn,
 } from "typeorm";
 import { GroupChatMemberPermission } from "./group-chat-member-permission.entity";
 import { Member } from "./member.entity";
+import { File } from "./file.entity";
 
 export enum GroupChatType {
   Personal = "Personal",
@@ -56,12 +59,14 @@ export class GroupChat {
   @Column({ length: 12, nullable: true })
   link?: string;
 
-  @Column({ length: 100 })
-  room: string;
-
   @OneToMany(() => GroupChatMemberPermission, (perm) => perm.group)
   groupChatMemberPermissions: GroupChatMemberPermission[];
 
   @OneToMany(() => Member, (member) => member.group)
   members: Member[];
+
+  @OneToOne(() => File, (file) => file.groupAvatar)
+  @JoinColumn({ name: "avatar" })
+  avatarGroup: File;
+  
 }

@@ -5,11 +5,14 @@ import {
   Column,
   OneToMany,
   Index,
+  OneToOne,
+  JoinColumn,
 } from "typeorm";
 import { Member } from "./member.entity";
 import { Token } from "./token.entity";
 import { Relationship } from "./relationship.entity";
 import { Notification } from "./notification.entity";
+import { File } from "./file.entity";
 
 export enum GenderType {
   Male = "Male",
@@ -38,7 +41,8 @@ export class User {
   @Column({ type: "enum", enum: GenderType, default: GenderType.Male })
   gender: GenderType;
 
-  @Column({ length: 50, nullable: true })
+  @Index()
+  @Column({ length: 36, nullable: true })
   avatar?: string;
 
   @Column({ length: 100 })
@@ -70,6 +74,10 @@ export class User {
 
   @OneToMany(() => Relationship, (rel) => rel.requester)
   relationshipRequesters: Relationship[];
+
+  @OneToOne(() => File, (file) => file.userAvatar)
+  @JoinColumn({ name: "avatar" })
+  avatarFile: File;
 
   @OneToMany(() => Relationship, (rel) => rel.addressee)
   relationshipAddressees: Relationship[];
