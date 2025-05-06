@@ -1,16 +1,22 @@
 // relationship.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index } from 'typeorm';
-import { User } from './user.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  Index,
+  CreateDateColumn,
+} from "typeorm";
+import { User } from "./user.entity";
 
 export enum RelationType {
-  NoRelationship = 'NoRelationship',
-  Friend = 'Friend',
-  Block = 'Block'
+  Pending = "Pending",
+  Friend = "Friend",
+  Block = "Block",
+  ReplyAccepted = "ReplyAccepted",
 }
 
-@Entity({ name: 'Relationship' })
-@Index('IdUser1', ['requesterId'])
-@Index('IdUser2', ['addresseeId'])
+@Entity({ name: "Relationship" })
 export class Relationship {
   @PrimaryGeneratedColumn()
   id: number;
@@ -21,15 +27,18 @@ export class Relationship {
   @Column({ nullable: true })
   addresseeId?: number;
 
-  @Column({ type: 'enum', enum: RelationType })
+  @Column({ type: "enum", enum: RelationType })
   relationType: RelationType;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: "datetime", default: () => "CURRENT_TIMESTAMP" })
   createAt: Date;
 
-  @ManyToOne(() => User, user => user.relationshipRequesters)
+  @ManyToOne(() => User, (user) => user.relationshipRequesters)
   requester?: User;
 
-  @ManyToOne(() => User, user => user.relationshipAddressees)
+  @ManyToOne(() => User, (user) => user.relationshipAddressees)
   addressee?: User;
+
+  @CreateDateColumn({ type: "datetime" })
+  createdAt: Date;
 }
