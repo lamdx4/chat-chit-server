@@ -56,7 +56,8 @@ export class Message {
   @Column()
   memberId: number;
 
-  @Column()
+  @Column({ nullable: true })
+  @Index("FileId")
   fileId: number;
 
   @OneToOne(() => File, (file) => file.message, { onDelete: "CASCADE" })

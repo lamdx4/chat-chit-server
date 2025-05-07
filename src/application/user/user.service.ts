@@ -1,3 +1,6 @@
+import Stream from "stream";
+import { CloudService } from "../../infras/aws-s3/aws-s3.service";
+import FileRepository from "../../infras/data/repository/file.repository";
 import UserRepository from "../../infras/data/repository/user.repository";
 import { GoogleOAuthHelper } from "../../infras/google-auth/google-oauth-helper";
 import { ConfigService } from "../../shared-kernel/env/config-service";
@@ -8,7 +11,35 @@ import { Result } from "../../web/utils/result";
 export default class UserService {
   private ggHelper: GoogleOAuthHelper;
   private userRepository: UserRepository;
+  private fileRepository: FileRepository;
+  private cloudService: CloudService;
+
+  getFriendList(userId: number) {
+    throw new Error("Method not implemented.");
+  }
+
+  // async unlinkGoogleAccount(userId: number) {
+  //   const user = await this.userRepository.findOneBy({
+  //     userId: userId,
+  //   });
+  //   if (!user) {
+  //     return Result.notFound("USER_NOT_FOUND");
+  //   }
+  //   if (!user.googleAccountId) {
+  //     return Result.notFound("GOOGLE_ACCOUNT_NOT_LINKED");
+  //   }
+  //   user.googleAccountId = undefined;
+  //   user.email = null;
+  //   const updatedUser = await this.userRepository.update(userId, user);
+  //   if (updatedUser.affected === 0) {
+  //     return Result.notFound("USER_NOT_FOUND");
+  //   }
+  //   return Result.Ok({});
+  // }
+
   constructor() {
+    this.fileRepository = new FileRepository();
+    this.cloudService = CloudService.getInstance();
     this.ggHelper = new GoogleOAuthHelper({
       ClientId: ConfigService.tryGet("GOOGLE_CLIENT_ID"),
       ClientSecret: ConfigService.tryGet("GOOGLE_CLIENT_SECRET"),
@@ -86,14 +117,38 @@ export default class UserService {
       return Result.notFound("USER_NOT_FOUND");
     }
     const oldAvatar = user.avatar;
-    user.avatar = file.filename;
+    try {
+      console.log("file", file);
+      const fileStream = Stream.Readable.from(
+        require("fs").createReadStream(file.path)
+      );
+      await this.cloudService.uploadStreamFile(
+        "public/" + file.filename,
+        fileStream,
+        file.mimetype
+      );
+      await this.fileRepository.insert({
+        fileId: "public/" + file.filename,
+        mimeType: file.mimetype,
+      });
+    } catch (error) {
+      console.error("Error while uploading file to S3:", error);
+      return Result.badRequest("FILE_UPLOAD_FAILED");
+    }
+    user.avatar = "public/" + file.filename;
     const updatedUser = await this.userRepository.update(userId, user);
     if (updatedUser.affected === 0) {
       user.avatar = oldAvatar;
       return Result.notFound("USER_NOT_FOUND");
     }
     if (oldAvatar) {
-      removeUploadFile(oldAvatar);
+      const fileToDelete = await this.fileRepository.findOneBy({
+        fileId: oldAvatar,
+      });
+      if (fileToDelete) {
+        await this.fileRepository.delete(fileToDelete.fileId);
+      }
+      await this.cloudService.deleteFile(oldAvatar);
     }
     return Result.Ok({});
   }
@@ -134,13 +189,21 @@ export default class UserService {
   }
 
   async getMyProfile(userId: number) {
-    const user = await this.userRepository.findOneBy({
-      userId: userId,
+    const user = await this.userRepository.findOne({
+      where: { userId: userId },
+      relations: { avatarFile: true },
     });
+
     if (!user) {
       return Result.notFound("USER_NOT_FOUND");
     }
-
+    if (user.avatar) {
+      user.avatar = await this.cloudService.getFilePreSignerUrl(user.avatar);
+      console.log(user.avatar);
+    }
+    if ("password" in user && user.hasOwnProperty("password")) {
+      delete (user as { password?: string }).password;
+    }
     return Result.Ok(user);
   }
 

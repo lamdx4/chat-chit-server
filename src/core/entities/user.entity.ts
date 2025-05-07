@@ -42,7 +42,7 @@ export class User {
   gender: GenderType;
 
   @Index()
-  @Column({ length: 36, nullable: true })
+  @Column({ type: "varchar", length: 100, nullable: true })
   avatar?: string;
 
   @Column({ length: 100 })

@@ -64,4 +64,12 @@ userRouter.post(
   asyncUtil(userController.linkGoogleToAccount.bind(userController))
 );
 
+// userRouter.post(
+//   "/un-link/google",
+//   authenticateMiddleware,
+//   asyncUtil(userController.unlinkGoogleAccount.bind(userController))
+// );
+
+
+
 export default userRouter;

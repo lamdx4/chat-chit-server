@@ -8,7 +8,6 @@ import {
   OneToOne,
   JoinColumn,
 } from "typeorm";
-import { GroupChatMemberPermission } from "./group-chat-member-permission.entity";
 import { Member } from "./member.entity";
 import { File } from "./file.entity";
 
@@ -58,9 +57,6 @@ export class GroupChat {
 
   @Column({ length: 12, nullable: true })
   link?: string;
-
-  @OneToMany(() => GroupChatMemberPermission, (perm) => perm.group)
-  groupChatMemberPermissions: GroupChatMemberPermission[];
 
   @OneToMany(() => Member, (member) => member.group)
   members: Member[];

@@ -1,12 +1,9 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   PrimaryColumn,
   OneToOne,
-  JoinColumn,
-  Index,
 } from "typeorm";
 import { User } from "./user.entity";
 import { GroupChat } from "./group-chat.entity";
@@ -14,14 +11,10 @@ import { Message } from "./message.entity";
 
 @Entity("File")
 export class File {
-  @PrimaryColumn({ type: "char", length: 36 })
+  @PrimaryColumn({ type: "varchar", length: 100 })
   fileId: string;
 
-  @Column({ type: "varchar", length: 255, nullable: false })
-  key: string;
-
-  @Column({ type: "varchar", length: 500, nullable: true })
-  url?: string;
+  url: string;
 
   @Column({ type: "varchar", length: 100, nullable: true })
   mimeType?: string;

@@ -6,6 +6,7 @@ import {
   ManyToOne,
   Index,
   CreateDateColumn,
+  JoinColumn,
 } from "typeorm";
 import { User } from "./user.entity";
 
@@ -34,9 +35,12 @@ export class Relationship {
   createAt: Date;
 
   @ManyToOne(() => User, (user) => user.relationshipRequesters)
+  @Index("requesterId")
+  @JoinColumn({ name: "requesterId" })
   requester?: User;
 
   @ManyToOne(() => User, (user) => user.relationshipAddressees)
+  @JoinColumn({ name: "addresseeId" })
   addressee?: User;
 
   @CreateDateColumn({ type: "datetime" })

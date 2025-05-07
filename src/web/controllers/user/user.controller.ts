@@ -9,11 +9,7 @@ export default class UserController {
   constructor() {
     this.userService = new UserService();
   }
-  async linkGoogleToAccount(
-    req: Request,
-    res: Response,
-    _next: NextFunction
-  ) {
+  async linkGoogleToAccount(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
     const code = req.body.code as string;
     const result = await this.userService.linkGoogleToAccount(userId, code);
@@ -36,8 +32,8 @@ export default class UserController {
       res.status(200).json(ResponseData.success(r.data));
     } else {
       res.status(r.code).json(ResponseData.fail(r.message));
-      await fs.unlink(file.path);
     }
+    await fs.unlink(file.path);
   }
 
   async changeMyProfile(req: Request, res: Response, _next: NextFunction) {
@@ -103,4 +99,82 @@ export default class UserController {
       res.status(result.code).json(ResponseData.fail(result.message));
     }
   }
+
+  // async unlinkGoogleAccount(req: Request, res: Response, _next: NextFunction) {
+  //   const userId = req.userId!;
+  //   const result = await this.userService.unlinkGoogleAccount(userId);
+  //   if (result.isSuccess) {
+  //     res.status(200).json(ResponseData.success(result.data));
+  //   } else {
+  //     res.status(result.code).json(ResponseData.fail(result.message));
+  //   }
+  // }
+
+  // async getFriendList(req: Request, res: Response, _next: NextFunction) {
+  //   const userId = req.userId!;
+  //   const result = await this.userService.getFriendList(userId);
+  //   if (result.isSuccess) {
+  //     res.status(200).json(ResponseData.success(result.data));
+  //   } else {
+  //     res.status(result.code).json(ResponseData.fail(result.message));
+  //   }
+  // }
+  // async getFriendRequestList(req: Request, res: Response, _next: NextFunction) {
+  //   const userId = req.userId!;
+  //   const result = await this.userService.getFriendRequestList(userId);
+  //   if (result.isSuccess) {
+  //     res.status(200).json(ResponseData.success(result.data));
+  //   } else {
+  //     res.status(result.code).json(ResponseData.fail(result.message));
+  //   }
+  // }
+  // async getFriendRequestSentList(req: Request, res: Response, _next: NextFunction) {
+  //   const userId = req.userId!;
+  //   const result = await this.userService.getFriendRequestSentList(userId);
+  //   if (result.isSuccess) {
+  //     res.status(200).json(ResponseData.success(result.data));
+  //   } else {
+  //     res.status(result.code).json(ResponseData.fail(result.message));
+  //   }
+  // }
+  // async acceptFriendRequest(req: Request, res: Response, _next: NextFunction) {
+  //   const userId = req.userId!;
+  //   const friendId = req.body.friendId as number;
+  //   const result = await this.userService.acceptFriendRequest(userId, friendId);
+  //   if (result.isSuccess) {
+  //     res.status(200).json(ResponseData.success(result.data));
+  //   } else {
+  //     res.status(result.code).json(ResponseData.fail(result.message));
+  //   }
+  // }
+  // async rejectFriendRequest(req: Request, res: Response, _next: NextFunction) {
+  //   const userId = req.userId!;
+  //   const friendId = req.body.friendId as number;
+  //   const result = await this.userService.rejectFriendRequest(userId, friendId);
+  //   if (result.isSuccess) {
+  //     res.status(200).json(ResponseData.success(result.data));
+  //   } else {
+  //     res.status(result.code).json(ResponseData.fail(result.message));
+  //   }
+  // }
+  // async cancelFriendRequest(req: Request, res: Response, _next: NextFunction) {
+  //   const userId = req.userId!;
+  //   const friendId = req.body.friendId as number;
+  //   const result = await this.userService.cancelFriendRequest(userId, friendId);
+  //   if (result.isSuccess) {
+  //     res.status(200).json(ResponseData.success(result.data));
+  //   } else {
+  //     res.status(result.code).json(ResponseData.fail(result.message));
+  //   }
+  // }
+  // async removeFriend(req: Request, res: Response, _next: NextFunction) {
+  //   const userId = req.userId!;
+  //   const friendId = req.body.friendId as number;
+  //   const result = await this.userService.removeFriend(userId, friendId);
+  //   if (result.isSuccess) {
+  //     res.status(200).json(ResponseData.success(result.data));
+  //   } else {
+  //     res.status(result.code).json(ResponseData.fail(result.message));
+  //   }
+  // }
 }
