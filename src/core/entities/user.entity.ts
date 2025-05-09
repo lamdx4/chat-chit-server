@@ -26,8 +26,8 @@ export class User {
   @PrimaryGeneratedColumn({ name: "userId" })
   userId: number;
 
-  @Column({ length: 100, nullable: true })
-  email?: string;
+  @Column({ type: "varchar", length: 100, nullable: true })
+  email?: string | null;
 
   @Column({ length: 15 })
   phone: string;
@@ -57,8 +57,8 @@ export class User {
   @Column({ length: 100, nullable: true })
   country?: string;
 
-  @Column({ nullable: true })
-  googleAccountId?: string;
+  @Column({ type: "varchar", length: 100, nullable: true })
+  googleAccountId?: string | null;
 
   @Column("tinyint", { default: 1 })
   isActive: boolean;

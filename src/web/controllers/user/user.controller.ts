@@ -3,6 +3,7 @@ import UserService from "../../../application/user/user.service";
 import { ResponseData } from "../../utils/response-data";
 import { ChangeMyBaseProfileRequest } from "./req/change-base-profile.req";
 import fs from "fs/promises";
+import { CursorPaging } from "../../utils/response-pagination";
 
 export default class UserController {
   private userService: UserService;
@@ -20,7 +21,7 @@ export default class UserController {
     }
   }
 
-  async changeAvatar(req: Request, res: Response, next: NextFunction) {
+  async changeAvatar(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
     const file = req.file;
     if (!file) {
@@ -100,81 +101,172 @@ export default class UserController {
     }
   }
 
-  // async unlinkGoogleAccount(req: Request, res: Response, _next: NextFunction) {
-  //   const userId = req.userId!;
-  //   const result = await this.userService.unlinkGoogleAccount(userId);
-  //   if (result.isSuccess) {
-  //     res.status(200).json(ResponseData.success(result.data));
-  //   } else {
-  //     res.status(result.code).json(ResponseData.fail(result.message));
-  //   }
-  // }
+  async unlinkGoogleAccount(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const result = await this.userService.unlinkGoogleAccount(userId);
+    if (result.isSuccess) {
+      res.status(200).json(ResponseData.success(result.data));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
 
-  // async getFriendList(req: Request, res: Response, _next: NextFunction) {
-  //   const userId = req.userId!;
-  //   const result = await this.userService.getFriendList(userId);
-  //   if (result.isSuccess) {
-  //     res.status(200).json(ResponseData.success(result.data));
-  //   } else {
-  //     res.status(result.code).json(ResponseData.fail(result.message));
-  //   }
-  // }
-  // async getFriendRequestList(req: Request, res: Response, _next: NextFunction) {
-  //   const userId = req.userId!;
-  //   const result = await this.userService.getFriendRequestList(userId);
-  //   if (result.isSuccess) {
-  //     res.status(200).json(ResponseData.success(result.data));
-  //   } else {
-  //     res.status(result.code).json(ResponseData.fail(result.message));
-  //   }
-  // }
-  // async getFriendRequestSentList(req: Request, res: Response, _next: NextFunction) {
-  //   const userId = req.userId!;
-  //   const result = await this.userService.getFriendRequestSentList(userId);
-  //   if (result.isSuccess) {
-  //     res.status(200).json(ResponseData.success(result.data));
-  //   } else {
-  //     res.status(result.code).json(ResponseData.fail(result.message));
-  //   }
-  // }
-  // async acceptFriendRequest(req: Request, res: Response, _next: NextFunction) {
-  //   const userId = req.userId!;
-  //   const friendId = req.body.friendId as number;
-  //   const result = await this.userService.acceptFriendRequest(userId, friendId);
-  //   if (result.isSuccess) {
-  //     res.status(200).json(ResponseData.success(result.data));
-  //   } else {
-  //     res.status(result.code).json(ResponseData.fail(result.message));
-  //   }
-  // }
-  // async rejectFriendRequest(req: Request, res: Response, _next: NextFunction) {
-  //   const userId = req.userId!;
-  //   const friendId = req.body.friendId as number;
-  //   const result = await this.userService.rejectFriendRequest(userId, friendId);
-  //   if (result.isSuccess) {
-  //     res.status(200).json(ResponseData.success(result.data));
-  //   } else {
-  //     res.status(result.code).json(ResponseData.fail(result.message));
-  //   }
-  // }
-  // async cancelFriendRequest(req: Request, res: Response, _next: NextFunction) {
-  //   const userId = req.userId!;
-  //   const friendId = req.body.friendId as number;
-  //   const result = await this.userService.cancelFriendRequest(userId, friendId);
-  //   if (result.isSuccess) {
-  //     res.status(200).json(ResponseData.success(result.data));
-  //   } else {
-  //     res.status(result.code).json(ResponseData.fail(result.message));
-  //   }
-  // }
-  // async removeFriend(req: Request, res: Response, _next: NextFunction) {
-  //   const userId = req.userId!;
-  //   const friendId = req.body.friendId as number;
-  //   const result = await this.userService.removeFriend(userId, friendId);
-  //   if (result.isSuccess) {
-  //     res.status(200).json(ResponseData.success(result.data));
-  //   } else {
-  //     res.status(result.code).json(ResponseData.fail(result.message));
-  //   }
-  // }
+  async getFriendList(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const cursor = Number(req.query.cursor);
+    const limit = Number(req.query.limit) || 10;
+    const result = await this.userService.getFriendList(userId, cursor, limit);
+    if (result.isSuccess) {
+      const data = result.data || [];
+
+      const nextCursor =
+        data.length === limit ? data[data.length - 1].relationshipId : null;
+
+      res
+        .status(200)
+        .json(ResponseData.success(new CursorPaging(data, nextCursor)));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
+  async getFriendRequestList(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const cursor = Number(req.query.cursor);
+    const limit = Number(req.query.limit) || 10;
+    const result = await this.userService.getFriendRequestList(
+      userId,
+      cursor,
+      limit
+    );
+    if (result.isSuccess) {
+      const data = result.data || [];
+
+      const nextCursor =
+        data.length === limit ? data[data.length - 1].relationshipId : null;
+
+      res
+        .status(200)
+        .json(ResponseData.success(new CursorPaging(data, nextCursor)));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
+  async getFriendRequestSentList(
+    req: Request,
+    res: Response,
+    _next: NextFunction
+  ) {
+    const userId = req.userId!;
+    const cursor = Number(req.query.cursor);
+    const limit = Number(req.query.limit) || 10;
+    const result = await this.userService.getFriendRequestSentList(
+      userId,
+      cursor,
+      limit
+    );
+    if (result.isSuccess) {
+      const data = result.data || [];
+
+      const nextCursor =
+        data.length === limit ? data[data.length - 1].relationshipId : null;
+
+      res
+        .status(200)
+        .json(ResponseData.success(new CursorPaging(data, nextCursor)));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
+  async getBlockList(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const cursor = Number(req.query.cursor);
+    const limit = Number(req.query.limit) || 10;
+    const result = await this.userService.getBlockList(
+      userId,
+      cursor,
+      limit
+    );
+    if (result.isSuccess) {
+      const data = result.data || [];
+
+      const nextCursor =
+        data.length === limit ? data[data.length - 1].relationshipId : null;
+
+      res
+        .status(200)
+        .json(ResponseData.success(new CursorPaging(data, nextCursor)));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
+  async acceptFriendRequest(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const targeUserId = req.body.targeUserId as number;
+    const result = await this.userService.acceptFriendRequest(userId, targeUserId);
+    if (result.isSuccess) {
+      res.status(200).json(ResponseData.success(result.data));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
+  async rejectFriendRequest(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const targeUserId = req.body.targeUserId as number;
+    const result = await this.userService.rejectFriendRequest(userId, targeUserId);
+    if (result.isSuccess) {
+      res.status(200).json(ResponseData.success(result.data));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
+  async cancelMyFriendRequestSent(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const targeUserId = req.body.targeUserId as number;
+    const result = await this.userService.cancelMyFriendRequestSent(userId, targeUserId);
+    if (result.isSuccess) {
+      res.status(200).json(ResponseData.success(result.data));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
+  async removeFriend(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const targeUserId = req.body.targeUserId as number;
+    const result = await this.userService.removeFriend(userId, targeUserId);
+    if (result.isSuccess) {
+      res.status(200).json(ResponseData.success(result.data));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
+  async blockUser(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const targeUserId = req.body.targeUserId as number;
+    const result = await this.userService.blockUser(userId, targeUserId);
+    if (result.isSuccess) {
+      res.status(200).json(ResponseData.success(result.data));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
+  async unblockUser(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const targeUserId = req.body.targeUserId as number;
+    const result = await this.userService.unblockUser(userId, targeUserId);
+    if (result.isSuccess) {
+      res.status(200).json(ResponseData.success(result.data));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
 }

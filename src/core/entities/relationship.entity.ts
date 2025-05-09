@@ -20,7 +20,7 @@ export enum RelationType {
 @Entity({ name: "Relationship" })
 export class Relationship {
   @PrimaryGeneratedColumn()
-  id: number;
+  relationshipId: number;
 
   @Column({ nullable: true })
   requesterId?: number;

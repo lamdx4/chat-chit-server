@@ -5,37 +5,22 @@ import UserRepository from "../../infras/data/repository/user.repository";
 import { GoogleOAuthHelper } from "../../infras/google-auth/google-oauth-helper";
 import { ConfigService } from "../../shared-kernel/env/config-service";
 import { ChangeMyBaseProfileRequest } from "../../web/controllers/user/req/change-base-profile.req";
-import removeUploadFile from "../../web/utils/remove-upload-file";
 import { Result } from "../../web/utils/result";
+import RelationshipRepository from "../../infras/data/repository/relationship.repository";
+import {
+  Relationship,
+  RelationType,
+} from "../../core/entities/relationship.entity";
+import { UserRelationshipDto } from "./dtos/user-relationship";
+import { mapArrayToDto, mapToDto } from "../utils/mapper";
+import { LessThan } from "typeorm";
 
 export default class UserService {
   private ggHelper: GoogleOAuthHelper;
   private userRepository: UserRepository;
   private fileRepository: FileRepository;
   private cloudService: CloudService;
-
-  getFriendList(userId: number) {
-    throw new Error("Method not implemented.");
-  }
-
-  // async unlinkGoogleAccount(userId: number) {
-  //   const user = await this.userRepository.findOneBy({
-  //     userId: userId,
-  //   });
-  //   if (!user) {
-  //     return Result.notFound("USER_NOT_FOUND");
-  //   }
-  //   if (!user.googleAccountId) {
-  //     return Result.notFound("GOOGLE_ACCOUNT_NOT_LINKED");
-  //   }
-  //   user.googleAccountId = undefined;
-  //   user.email = null;
-  //   const updatedUser = await this.userRepository.update(userId, user);
-  //   if (updatedUser.affected === 0) {
-  //     return Result.notFound("USER_NOT_FOUND");
-  //   }
-  //   return Result.Ok({});
-  // }
+  private relationshipRepository: RelationshipRepository;
 
   constructor() {
     this.fileRepository = new FileRepository();
@@ -46,6 +31,152 @@ export default class UserService {
       RedirectUri: ConfigService.tryGet("GOOGLE_REDIRECT_URI"),
     });
     this.userRepository = new UserRepository();
+    this.relationshipRepository = new RelationshipRepository();
+  }
+
+  async getFriendRequestList(userId: number, cursor: number, limit: number) {
+    const user = await this.userRepository.findOneBy({
+      userId: userId,
+    });
+    if (!user) {
+      return Result.notFound("USER_NOT_FOUND");
+    }
+    const friendReqList = await this.relationshipRepository.find({
+      where: [
+        {
+          addresseeId: userId,
+          relationType: RelationType.Pending,
+          relationshipId: LessThan(cursor),
+        },
+      ],
+      order: {
+        relationshipId: "DESC",
+      },
+      take: limit,
+    });
+    return Result.Ok(await this.normalizeRelationships(userId, friendReqList));
+  }
+
+  async getFriendRequestSentList(
+    userId: number,
+    cursor: number,
+    limit: number
+  ) {
+    const user = await this.userRepository.findOneBy({
+      userId: userId,
+    });
+    if (!user) {
+      return Result.notFound("USER_NOT_FOUND");
+    }
+    const friendList = await this.relationshipRepository.find({
+      where: [
+        {
+          requesterId: userId,
+          relationType: RelationType.Pending,
+          relationshipId: LessThan(cursor),
+        },
+      ],
+      order: {
+        relationshipId: "DESC",
+      },
+      take: limit,
+    });
+    return Result.Ok(await this.normalizeRelationships(userId, friendList));
+  }
+
+  async getBlockList(userId: number, cursor: number, limit: number) {
+    const user = await this.userRepository.findOneBy({
+      userId: userId,
+    });
+    if (!user) {
+      return Result.notFound("USER_NOT_FOUND");
+    }
+    const friendList = await this.relationshipRepository.find({
+      where: [
+        {
+          requesterId: userId,
+          relationType: RelationType.Block,
+          relationshipId: LessThan(cursor),
+        },
+      ],
+      order: {
+        relationshipId: "DESC",
+      },
+      take: limit,
+    });
+    return Result.Ok(await this.normalizeRelationships(userId, friendList));
+  }
+
+  async getFriendList(userId: number, cursor: number, limit: number) {
+    const user = await this.userRepository.findOneBy({
+      userId: userId,
+    });
+    if (!user) {
+      return Result.notFound("USER_NOT_FOUND");
+    }
+    const friendList = await this.relationshipRepository.find({
+      where: [
+        {
+          requesterId: userId,
+          relationType: RelationType.Friend,
+          relationshipId: LessThan(cursor),
+        },
+        {
+          addresseeId: userId,
+          relationType: RelationType.Friend,
+          relationshipId: LessThan(cursor),
+        },
+      ],
+      order: {
+        relationshipId: "DESC",
+      },
+      take: limit,
+    });
+    return Result.Ok(await this.normalizeRelationships(userId, friendList));
+  }
+
+  async normalizeRelationships(
+    userId: number,
+    rawRelations: Relationship[]
+  ): Promise<UserRelationshipDto[]> {
+    const relations = await Promise.all(
+      rawRelations.map(async (rel) => {
+        const isOutgoing = rel.requesterId === userId;
+        const targetUserId = isOutgoing ? rel.addresseeId : rel.requesterId;
+        const targetUser = await this.userRepository.findOneBy({
+          userId: targetUserId,
+        });
+        return {
+          relationshipId: rel.relationshipId,
+          targetUserId,
+          targetUser,
+          relationType: rel.relationType,
+          direction: isOutgoing ? "Outgoing" : "Incoming",
+          createdAt: rel.createdAt,
+        };
+      })
+    );
+    return mapArrayToDto(UserRelationshipDto, relations);
+  }
+
+  async unlinkGoogleAccount(userId: number) {
+    const user = await this.userRepository.findOneBy({
+      userId: userId,
+    });
+    if (!user) {
+      return Result.notFound("USER_NOT_FOUND");
+    }
+    if (!user.googleAccountId) {
+      return Result.notFound("GOOGLE_ACCOUNT_NOT_LINKED");
+    }
+    const updatedUser = await this.userRepository.update(userId, {
+      googleAccountId: null,
+      email: null,
+    });
+    if (updatedUser.affected === 0) {
+      return Result.notFound("USER_NOT_FOUND");
+    }
+    return Result.Ok({});
   }
 
   async linkGoogleToAccount(userId: number, code: string) {
@@ -216,5 +347,103 @@ export default class UserService {
       return Result.notFound("USER_NOT_FOUND");
     }
     return Result.Ok(user);
+  }
+
+  async acceptFriendRequest(userId: number, targeUserId: number) {
+    const relationship = await this.relationshipRepository.findOneBy({
+      requesterId: targeUserId,
+      addresseeId: userId,
+      relationType: RelationType.Pending,
+    });
+    if (!relationship) {
+      return Result.notFound("RELATIONSHIP_NOT_FOUND");
+    }
+    relationship.relationType = RelationType.Friend;
+    await this.relationshipRepository.save(relationship);
+    return Result.Ok({});
+  }
+
+  async rejectFriendRequest(userId: number, targeUserId: number) {
+    const relationship = await this.relationshipRepository.findOneBy({
+      requesterId: targeUserId,
+      addresseeId: userId,
+      relationType: RelationType.Pending,
+    });
+    if (!relationship) {
+      return Result.notFound("RELATIONSHIP_NOT_FOUND");
+    }
+    await this.relationshipRepository.delete(relationship.relationshipId);
+    return Result.Ok({});
+  }
+
+  async cancelMyFriendRequestSent(userId: number, targeUserId: number) {
+    const relationship = await this.relationshipRepository.findOneBy({
+      addresseeId: targeUserId,
+      requesterId: userId,
+      relationType: RelationType.Pending,
+    });
+    if (!relationship) {
+      return Result.notFound("RELATIONSHIP_NOT_FOUND");
+    }
+    await this.relationshipRepository.delete(relationship.relationshipId);
+    return Result.Ok({});
+  }
+
+  async removeFriend(userId: number, targeUserId: number) {
+    const relationship = await this.relationshipRepository.findOneBy([
+      {
+        addresseeId: targeUserId,
+        requesterId: userId,
+        relationType: RelationType.Friend,
+      },
+      {
+        requesterId: targeUserId,
+        addresseeId: userId,
+        relationType: RelationType.Friend,
+      },
+    ]);
+    if (!relationship) {
+      return Result.notFound("RELATIONSHIP_NOT_FOUND");
+    }
+    await this.relationshipRepository.delete(relationship.relationshipId);
+    return Result.Ok({});
+  }
+
+  async blockUser(userId: number, targeUserId: number) {
+    const relationship = await this.relationshipRepository.findOneBy([
+      {
+        requesterId: userId,
+        addresseeId: targeUserId,
+      },
+      {
+        requesterId: targeUserId,
+        addresseeId: userId,
+      },
+    ]);
+
+    if (relationship) {
+      await this.relationshipRepository.delete(relationship.relationshipId);
+    }
+
+    await this.relationshipRepository.save({
+      requesterId: userId,
+      addresseeId: targeUserId,
+      relationType: RelationType.Block,
+    });
+
+    return Result.Ok({});
+  }
+
+  async unblockUser(userId: number, targeUserId: number) {
+    const relationship = await this.relationshipRepository.findOneBy({
+      addresseeId: targeUserId,
+      requesterId: userId,
+      relationType: RelationType.Block,
+    });
+    if (!relationship) {
+      return Result.notFound("RELATIONSHIP_NOT_FOUND");
+    }
+    await this.relationshipRepository.delete(relationship.relationshipId);
+    return Result.Ok({});
   }
 }
