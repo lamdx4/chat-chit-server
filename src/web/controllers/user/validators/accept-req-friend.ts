@@ -1,9 +1,9 @@
 import { body } from "express-validator";
 
 const acceptFriendRequestValidator = [
-  body("targeUserId")
+  body("targetUserId")
     .exists()
-    .withMessage("targeUserId is required")
+    .withMessage("targetUserId is required")
     .isNumeric(),
 ];
 export default acceptFriendRequestValidator;

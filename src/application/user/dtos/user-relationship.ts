@@ -7,6 +7,9 @@ export class UserRelationshipDto {
   relationshipId: number;
 
   @Expose()
+  mutualFriends: number;
+
+  @Expose()
   targetUserId: number | undefined;
 
   @Type(() => UserDto)

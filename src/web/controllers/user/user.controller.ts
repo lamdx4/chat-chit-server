@@ -205,8 +205,8 @@ export default class UserController {
 
   async acceptFriendRequest(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
-    const targeUserId = req.body.targeUserId as number;
-    const result = await this.userService.acceptFriendRequest(userId, targeUserId);
+    const targetUserId = req.body.targetUserId as number;
+    const result = await this.userService.acceptFriendRequest(userId, targetUserId);
     if (result.isSuccess) {
       res.status(200).json(ResponseData.success(result.data));
     } else {
@@ -216,8 +216,8 @@ export default class UserController {
 
   async rejectFriendRequest(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
-    const targeUserId = req.body.targeUserId as number;
-    const result = await this.userService.rejectFriendRequest(userId, targeUserId);
+    const targetUserId = req.body.targetUserId as number;
+    const result = await this.userService.rejectFriendRequest(userId, targetUserId);
     if (result.isSuccess) {
       res.status(200).json(ResponseData.success(result.data));
     } else {
@@ -227,8 +227,8 @@ export default class UserController {
 
   async cancelMyFriendRequestSent(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
-    const targeUserId = req.body.targeUserId as number;
-    const result = await this.userService.cancelMyFriendRequestSent(userId, targeUserId);
+    const targetUserId = req.body.targetUserId as number;
+    const result = await this.userService.cancelMyFriendRequestSent(userId, targetUserId);
     if (result.isSuccess) {
       res.status(200).json(ResponseData.success(result.data));
     } else {
@@ -238,8 +238,8 @@ export default class UserController {
 
   async removeFriend(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
-    const targeUserId = req.body.targeUserId as number;
-    const result = await this.userService.removeFriend(userId, targeUserId);
+    const targetUserId = req.body.targetUserId as number;
+    const result = await this.userService.removeFriend(userId, targetUserId);
     if (result.isSuccess) {
       res.status(200).json(ResponseData.success(result.data));
     } else {
@@ -249,8 +249,8 @@ export default class UserController {
 
   async blockUser(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
-    const targeUserId = req.body.targeUserId as number;
-    const result = await this.userService.blockUser(userId, targeUserId);
+    const targetUserId = req.body.targetUserId as number;
+    const result = await this.userService.blockUser(userId, targetUserId);
     if (result.isSuccess) {
       res.status(200).json(ResponseData.success(result.data));
     } else {
@@ -260,8 +260,8 @@ export default class UserController {
 
   async unblockUser(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
-    const targeUserId = req.body.targeUserId as number;
-    const result = await this.userService.unblockUser(userId, targeUserId);
+    const targetUserId = req.body.targetUserId as number;
+    const result = await this.userService.unblockUser(userId, targetUserId);
     if (result.isSuccess) {
       res.status(200).json(ResponseData.success(result.data));
     } else {

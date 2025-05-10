@@ -146,9 +146,42 @@ export default class UserService {
         const targetUser = await this.userRepository.findOneBy({
           userId: targetUserId,
         });
+        let mutualFriends: number = 0;
+        if (targetUser) {
+          if (targetUser.avatar) {
+            targetUser.avatar = this.cloudService.getStaticUrl(
+              targetUser.avatar
+            );
+          }
+          // Đếm số bạn chung giữa userId và targetUserId bằng truy vấn SQL
+          const rawResult = await this.relationshipRepository
+            .createQueryBuilder("r1")
+            .select("COUNT(*)", "mutualCount")
+            .innerJoin(
+              "Relationship",
+              "r2",
+              `(
+              r2.relationType = :friendType AND ((r2.requesterId = :targetUserId AND r2.addresseeId = r1.requesterId) OR 
+              (r2.addresseeId = :targetUserId AND r2.requesterId = r1.requesterId)
+              )
+              )`,
+              {
+                friendType: RelationType.Friend,
+                targetUserId,
+              }
+            )
+            .where(
+              "r1.relationType = :friendType AND ((r1.requesterId = :userId) OR (r1.addresseeId = :userId))",
+              { friendType: RelationType.Friend, userId }
+            )
+            .getRawOne();
+          mutualFriends = Number(rawResult?.mutualCount || 0);
+        }
+
         return {
           relationshipId: rel.relationshipId,
           targetUserId,
+          mutualFriends,
           targetUser,
           relationType: rel.relationType,
           direction: isOutgoing ? "Outgoing" : "Incoming",
@@ -349,9 +382,9 @@ export default class UserService {
     return Result.Ok(user);
   }
 
-  async acceptFriendRequest(userId: number, targeUserId: number) {
+  async acceptFriendRequest(userId: number, targetUserId: number) {
     const relationship = await this.relationshipRepository.findOneBy({
-      requesterId: targeUserId,
+      requesterId: targetUserId,
       addresseeId: userId,
       relationType: RelationType.Pending,
     });
@@ -363,9 +396,9 @@ export default class UserService {
     return Result.Ok({});
   }
 
-  async rejectFriendRequest(userId: number, targeUserId: number) {
+  async rejectFriendRequest(userId: number, targetUserId: number) {
     const relationship = await this.relationshipRepository.findOneBy({
-      requesterId: targeUserId,
+      requesterId: targetUserId,
       addresseeId: userId,
       relationType: RelationType.Pending,
     });
@@ -376,9 +409,9 @@ export default class UserService {
     return Result.Ok({});
   }
 
-  async cancelMyFriendRequestSent(userId: number, targeUserId: number) {
+  async cancelMyFriendRequestSent(userId: number, targetUserId: number) {
     const relationship = await this.relationshipRepository.findOneBy({
-      addresseeId: targeUserId,
+      addresseeId: targetUserId,
       requesterId: userId,
       relationType: RelationType.Pending,
     });
@@ -389,15 +422,15 @@ export default class UserService {
     return Result.Ok({});
   }
 
-  async removeFriend(userId: number, targeUserId: number) {
+  async removeFriend(userId: number, targetUserId: number) {
     const relationship = await this.relationshipRepository.findOneBy([
       {
-        addresseeId: targeUserId,
+        addresseeId: targetUserId,
         requesterId: userId,
         relationType: RelationType.Friend,
       },
       {
-        requesterId: targeUserId,
+        requesterId: targetUserId,
         addresseeId: userId,
         relationType: RelationType.Friend,
       },
@@ -409,14 +442,14 @@ export default class UserService {
     return Result.Ok({});
   }
 
-  async blockUser(userId: number, targeUserId: number) {
+  async blockUser(userId: number, targetUserId: number) {
     const relationship = await this.relationshipRepository.findOneBy([
       {
         requesterId: userId,
-        addresseeId: targeUserId,
+        addresseeId: targetUserId,
       },
       {
-        requesterId: targeUserId,
+        requesterId: targetUserId,
         addresseeId: userId,
       },
     ]);
@@ -427,16 +460,16 @@ export default class UserService {
 
     await this.relationshipRepository.save({
       requesterId: userId,
-      addresseeId: targeUserId,
+      addresseeId: targetUserId,
       relationType: RelationType.Block,
     });
 
     return Result.Ok({});
   }
 
-  async unblockUser(userId: number, targeUserId: number) {
+  async unblockUser(userId: number, targetUserId: number) {
     const relationship = await this.relationshipRepository.findOneBy({
-      addresseeId: targeUserId,
+      addresseeId: targetUserId,
       requesterId: userId,
       relationType: RelationType.Block,
     });
