@@ -268,5 +268,15 @@ export default class UserController {
       res.status(result.code).json(ResponseData.fail(result.message));
     }
   }
-
+  
+  async getRelationship(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const targetUserId = Number(req.params.targetUserId);
+    const result = await this.userService.getRelationship(userId, targetUserId);
+    if (result.isSuccess) {
+      res.status(200).json(ResponseData.success(result.data));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
 }

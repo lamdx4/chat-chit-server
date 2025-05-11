@@ -11,6 +11,7 @@ import cursorPagValidator from "./validators/get-friend-validator";
 import handleValidationErrors from "../../utils/handle-validation-errors";
 import { U } from "@faker-js/faker/dist/airline-BUL6NtOJ";
 import acceptFriendRequestValidator from "./validators/accept-req-friend";
+import getRelationshipValidator from "./validators/get-relationship.validator";
 
 const userController = new UserController();
 
@@ -159,6 +160,14 @@ userRouter.post(
   acceptFriendRequestValidator,
   handleValidationErrors,
   asyncUtil(userController.unblockUser.bind(userController))
+);
+
+userRouter.get(
+  "/relationship/get/:targetUserId",
+  authenticateMiddleware,
+  getRelationshipValidator,
+  handleValidationErrors,
+  asyncUtil(userController.getRelationship.bind(userController))
 );
 
 export default userRouter;

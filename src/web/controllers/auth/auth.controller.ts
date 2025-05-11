@@ -30,8 +30,16 @@ export default class AuthController {
     throw new Error("Method not implemented.");
   }
 
-  refreshToken(req: Request, res: Response, next: NextFunction) {
-    
+  async refreshToken(req: Request, res: Response, next: NextFunction) {
+    const { refreshToken } = req.body;
+    const r = await this.authService.refreshToken(refreshToken);
+    if (r.isSuccess) {
+      res
+        .status(HttpStatus.Ok)
+        .json(ResponseData.success(r.data, "Refresh token success"));
+    } else {
+      res.status(r.code).json(ResponseData.fail(r.message, r.errors));
+    }
   }
 
   logout(req: Request, res: Response, next: NextFunction) {

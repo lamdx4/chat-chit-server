@@ -34,6 +34,95 @@ export default class UserService {
     this.relationshipRepository = new RelationshipRepository();
   }
 
+  async getRelationship(userId: number, targetUserId: number) {
+    const relationship = await this.relationshipRepository.findOne({
+      where: [
+        {
+          requesterId: userId,
+          addresseeId: targetUserId,
+        },
+        {
+          requesterId: targetUserId,
+          addresseeId: userId,
+        },
+      ],
+    });
+    if (!relationship) {
+      return Result.Ok({
+        relationship: "NO_RELATIONSHIP"
+      });
+    } else
+      return Result.Ok({
+        relationship: relationship.relationType
+      });
+  }
+
+  async sendFriendRequest(userId: number, targetUserId: number) {
+    const user = await this.userRepository.findOneBy({
+      userId: userId,
+    });
+    if (!user) {
+      return Result.notFound("USER_NOT_FOUND");
+    }
+    const targetUser = await this.userRepository.findOneBy({
+      userId: targetUserId,
+    });
+    if (!targetUser) {
+      return Result.notFound("TARGET_USER_NOT_FOUND");
+    }
+    if (userId === targetUserId) {
+      return Result.conflict("CANNOT_SEND_FRIEND_REQUEST_TO_YOURSELF");
+    }
+    const existingRelationship = await this.relationshipRepository.findOneBy({
+      requesterId: userId,
+      addresseeId: targetUserId,
+      relationType: RelationType.Pending,
+    });
+    if (existingRelationship) {
+      return Result.conflict("FRIEND_REQUEST_ALREADY_SENT");
+    }
+    const existingFriendship = await this.relationshipRepository.findOneBy({
+      requesterId: userId,
+      addresseeId: targetUserId,
+      relationType: RelationType.Friend,
+    });
+    if (existingFriendship) {
+      return Result.conflict("ALREADY_FRIENDS");
+    }
+    const existingBlock = await this.relationshipRepository.findOneBy({
+      requesterId: userId,
+      addresseeId: targetUserId,
+      relationType: RelationType.Block,
+    });
+    if (existingBlock) {
+      return Result.conflict("USER_BLOCKED");
+    }
+    const existingBlockReverse = await this.relationshipRepository.findOneBy({
+      requesterId: targetUserId,
+      addresseeId: userId,
+      relationType: RelationType.Block,
+    });
+
+    if (existingBlockReverse) {
+      return Result.conflict("USER_BLOCKED");
+    }
+
+    const newRelationship = this.relationshipRepository.create({
+      requesterId: userId,
+      addresseeId: targetUserId,
+      relationType: RelationType.Pending,
+    });
+
+    await this.relationshipRepository.save(newRelationship);
+    return Result.Ok({
+      relationshipId: newRelationship.relationshipId,
+      targetUserId: targetUserId,
+      relationType: RelationType.Pending,
+      direction: "Outgoing",
+      createdAt: newRelationship.createdAt,
+    });
+  }
+
   async getFriendRequestList(userId: number, cursor: number, limit: number) {
     const user = await this.userRepository.findOneBy({
       userId: userId,

@@ -80,7 +80,6 @@ export default class AuthService {
         phoneNumber: user.phone,
       });
 
-
       return Result.Ok({
         user,
         token,
@@ -91,4 +90,21 @@ export default class AuthService {
   }
 
   logout(userId: Number): void {}
+
+  async refreshToken(token: string) {
+    const decoded = await this.jwtService.decodeRefreshToken(token);
+    if (decoded) {
+      const user = await this.userRepository.findOne({
+        where: { userId: decoded.userId },
+      });
+      if (user) {
+        const newToken = this.jwtService.generateAccessToken({
+          userId: user.userId,
+          phoneNumber: user.phone,
+        });
+        return Result.Ok({ accessToken: newToken });
+      }
+    }
+    return Result.badRequest("INVALID_TOKEN");
+  }
 }

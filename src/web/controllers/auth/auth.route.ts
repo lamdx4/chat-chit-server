@@ -6,9 +6,10 @@ import handleValidationErrors from "../../utils/handle-validation-errors";
 import registerValidator from "./validators/registetr.validator";
 import asyncUtil from "../../utils/async-wrapper";
 import { changePasswordValidator } from "./validators/change-password.validator";
+import getNewAccessTokenValidator from "./validators/get-new-accesstoken.validator";
+import authenticateMiddleware from "../../middlewares/authenticate.middleware";
 
 let authRouter = Router();
-
 
 const authController = new AuthController();
 
@@ -32,6 +33,8 @@ authRouter.post(
 );
 authRouter.post(
   "/refresh-token",
+  getNewAccessTokenValidator,
+  handleValidationErrors,
   asyncUtil(authController.refreshToken.bind(authController))
 );
 authRouter.post(
