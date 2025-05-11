@@ -80,38 +80,27 @@ export default class UserService {
     if (userId === targetUserId) {
       return Result.conflict("CANNOT_SEND_FRIEND_REQUEST_TO_YOURSELF");
     }
-    const existingRelationship = await this.relationshipRepository.findOneBy({
-      requesterId: userId,
-      addresseeId: targetUserId,
-      relationType: RelationType.Pending,
+    const existingRelationship = await this.relationshipRepository.findOne({
+      where: [
+        {
+          requesterId: userId,
+          addresseeId: targetUserId,
+        },
+        {
+          requesterId: targetUserId,
+          addresseeId: userId,
+        },
+      ],
     });
     if (existingRelationship) {
-      return Result.conflict("FRIEND_REQUEST_ALREADY_SENT");
-    }
-    const existingFriendship = await this.relationshipRepository.findOneBy({
-      requesterId: userId,
-      addresseeId: targetUserId,
-      relationType: RelationType.Friend,
-    });
-    if (existingFriendship) {
-      return Result.conflict("ALREADY_FRIENDS");
-    }
-    const existingBlock = await this.relationshipRepository.findOneBy({
-      requesterId: userId,
-      addresseeId: targetUserId,
-      relationType: RelationType.Block,
-    });
-    if (existingBlock) {
-      return Result.conflict("USER_BLOCKED");
-    }
-    const existingBlockReverse = await this.relationshipRepository.findOneBy({
-      requesterId: targetUserId,
-      addresseeId: userId,
-      relationType: RelationType.Block,
-    });
-
-    if (existingBlockReverse) {
-      return Result.conflict("USER_BLOCKED");
+      if (existingRelationship.relationType === RelationType.Pending) {
+        return Result.conflict("FRIEND_REQUEST_ALREADY_SENT");
+      } else if (
+        existingRelationship.relationType === RelationType.Friend ||
+        existingRelationship.relationType === RelationType.Block
+      ) {
+        return Result.conflict("ALREADY_FRIENDS_OR_BLOCKED");
+      }
     }
 
     const newRelationship = this.relationshipRepository.create({

@@ -21,6 +21,20 @@ export default class UserController {
     }
   }
 
+  async sendFriendRequest(req: Request, res: Response, _next: NextFunction) {
+    const userId = req.userId!;
+    const targetUserId = req.body.targetUserId as number;
+    const result = await this.userService.sendFriendRequest(
+      userId,
+      targetUserId
+    );
+    if (result.isSuccess) {
+      res.status(200).json(ResponseData.success(result.data));
+    } else {
+      res.status(result.code).json(ResponseData.fail(result.message));
+    }
+  }
+
   async changeAvatar(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
     const file = req.file;
@@ -184,11 +198,7 @@ export default class UserController {
     const userId = req.userId!;
     const cursor = Number(req.query.cursor);
     const limit = Number(req.query.limit) || 10;
-    const result = await this.userService.getBlockList(
-      userId,
-      cursor,
-      limit
-    );
+    const result = await this.userService.getBlockList(userId, cursor, limit);
     if (result.isSuccess) {
       const data = result.data || [];
 
@@ -206,7 +216,10 @@ export default class UserController {
   async acceptFriendRequest(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
     const targetUserId = req.body.targetUserId as number;
-    const result = await this.userService.acceptFriendRequest(userId, targetUserId);
+    const result = await this.userService.acceptFriendRequest(
+      userId,
+      targetUserId
+    );
     if (result.isSuccess) {
       res.status(200).json(ResponseData.success(result.data));
     } else {
@@ -217,7 +230,10 @@ export default class UserController {
   async rejectFriendRequest(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
     const targetUserId = req.body.targetUserId as number;
-    const result = await this.userService.rejectFriendRequest(userId, targetUserId);
+    const result = await this.userService.rejectFriendRequest(
+      userId,
+      targetUserId
+    );
     if (result.isSuccess) {
       res.status(200).json(ResponseData.success(result.data));
     } else {
@@ -225,10 +241,17 @@ export default class UserController {
     }
   }
 
-  async cancelMyFriendRequestSent(req: Request, res: Response, _next: NextFunction) {
+  async cancelMyFriendRequestSent(
+    req: Request,
+    res: Response,
+    _next: NextFunction
+  ) {
     const userId = req.userId!;
     const targetUserId = req.body.targetUserId as number;
-    const result = await this.userService.cancelMyFriendRequestSent(userId, targetUserId);
+    const result = await this.userService.cancelMyFriendRequestSent(
+      userId,
+      targetUserId
+    );
     if (result.isSuccess) {
       res.status(200).json(ResponseData.success(result.data));
     } else {
@@ -268,7 +291,7 @@ export default class UserController {
       res.status(result.code).json(ResponseData.fail(result.message));
     }
   }
-  
+
   async getRelationship(req: Request, res: Response, _next: NextFunction) {
     const userId = req.userId!;
     const targetUserId = Number(req.params.targetUserId);

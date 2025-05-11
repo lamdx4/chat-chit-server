@@ -170,4 +170,12 @@ userRouter.get(
   asyncUtil(userController.getRelationship.bind(userController))
 );
 
+userRouter.post(
+  "/relationship/send-friend-request",
+  authenticateMiddleware,
+  acceptFriendRequestValidator,
+  handleValidationErrors,
+  asyncUtil(userController.sendFriendRequest.bind(userController))
+);
+
 export default userRouter;
