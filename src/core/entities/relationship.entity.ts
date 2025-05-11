@@ -22,11 +22,11 @@ export class Relationship {
   @PrimaryGeneratedColumn()
   relationshipId: number;
 
-  @Column({ nullable: true })
-  requesterId?: number;
+  @Column({ nullable: false })
+  requesterId: number;
 
-  @Column({ nullable: true })
-  addresseeId?: number;
+  @Column({ nullable: false })
+  addresseeId: number;
 
   @Column({ type: "enum", enum: RelationType })
   relationType: RelationType;

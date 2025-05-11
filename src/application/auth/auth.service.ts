@@ -89,7 +89,7 @@ export default class AuthService {
     return Result.badRequest("INVALID_INFORMATION_LOGIN");
   }
 
-  logout(userId: Number): void {}
+  logout(userId: number): void {}
 
   async refreshToken(token: string) {
     const decoded = await this.jwtService.decodeRefreshToken(token);

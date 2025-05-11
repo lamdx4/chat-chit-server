@@ -49,12 +49,19 @@ export default class UserService {
     });
     if (!relationship) {
       return Result.Ok({
-        relationship: "NO_RELATIONSHIP"
+        relationship: "NO_RELATIONSHIP",
+        direction: null,
       });
-    } else
+    } else {
       return Result.Ok({
-        relationship: relationship.relationType
+        relationship: relationship.relationType,
+        direction:
+          relationship.requesterId === userId &&
+          relationship.addresseeId === targetUserId
+            ? "Outgoing"
+            : "Incoming",
       });
+    }
   }
 
   async sendFriendRequest(userId: number, targetUserId: number) {
