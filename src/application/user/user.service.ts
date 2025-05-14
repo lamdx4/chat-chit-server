@@ -14,6 +14,7 @@ import {
 import { UserRelationshipDto } from "./dtos/user-relationship";
 import { mapArrayToDto, mapToDto } from "../utils/mapper";
 import { LessThan } from "typeorm";
+import { UserDto } from "./dtos/user-profile.dto";
 
 export default class UserService {
   private ggHelper: GoogleOAuthHelper;
@@ -464,7 +465,7 @@ export default class UserService {
     if (!user) {
       return Result.notFound("USER_NOT_FOUND");
     }
-    return Result.Ok(user);
+    return Result.Ok(mapToDto(UserDto, user));
   }
 
   async acceptFriendRequest(userId: number, targetUserId: number) {
