@@ -4,7 +4,7 @@ import FileRepository from "../../infras/data/repository/file.repository";
 import UserRepository from "../../infras/data/repository/user.repository";
 import { GoogleOAuthHelper } from "../../infras/google-auth/google-oauth-helper";
 import { ConfigService } from "../../shared-kernel/env/config-service";
-import { ChangeMyBaseProfileRequest } from "../../web/controllers/user/req/change-base-profile.req";
+import { ChangeMyBaseProfileRequest } from "../../web/controllers/user/reqs/change-base-profile.req";
 import { Result } from "../../web/utils/result";
 import RelationshipRepository from "../../infras/data/repository/relationship.repository";
 import {

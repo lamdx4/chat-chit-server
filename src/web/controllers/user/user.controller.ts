@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import UserService from "../../../application/user/user.service";
 import { ResponseData } from "../../utils/response-data";
-import { ChangeMyBaseProfileRequest } from "./req/change-base-profile.req";
+import { ChangeMyBaseProfileRequest } from "./reqs/change-base-profile.req";
 import fs from "fs/promises";
 import { CursorPaging } from "../../utils/response-pagination";
 

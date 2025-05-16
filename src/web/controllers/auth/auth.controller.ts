@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import AuthService from "../../../application/auth/auth.service";
 import { ResponseData } from "../../utils/response-data";
 import { HttpStatus } from "../../utils/http-status-code";
-import RegisterDto from "./dtos/register.dto";
+import RegisterDto from "./reqs/register.dto";
 
 export default class AuthController {
   private authService: AuthService;
