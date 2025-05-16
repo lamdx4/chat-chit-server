@@ -5,7 +5,7 @@ import "dotenv/config";
 import express, { Request, Response } from "express";
 import http from "http";
 import { ConfigService } from "./src/shared-kernel/env/config-service";
-import createSocketIo from "./src/web/socketio/socket-io";
+import getSocketIo from "./src/web/socketio/socket-io";
 import logger from "./src/shared-kernel/logger/logger";
 import initializeBaseConfigForApp from "./src/web/configurations/base-config-for-app";
 import initializeInfrastructure from "./src/infras/init-infras";
@@ -31,7 +31,7 @@ async function startApp() {
   const server = http.createServer(app);
   const PORT = ConfigService.tryGet("SERVER_PORT");
 
-  createSocketIo(server);
+  getSocketIo(server);
 
   initializeBaseConfigForApp(app);
 
