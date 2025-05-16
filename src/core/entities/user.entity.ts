@@ -13,6 +13,7 @@ import { Token } from "./token.entity";
 import { Relationship } from "./relationship.entity";
 import { Notification } from "./notification.entity";
 import { File } from "./file.entity";
+import { UserPrivacy } from "./user-privacy.entity";
 
 export enum GenderType {
   Male = "Male",
@@ -84,4 +85,7 @@ export class User {
 
   @OneToMany(() => Notification, (notification) => notification.owner)
   notifications: Notification[];
+
+  @OneToOne(() => UserPrivacy, (privacy) => privacy.user, { cascade: true })
+  userPrivacy: UserPrivacy;
 }
