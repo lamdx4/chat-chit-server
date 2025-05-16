@@ -193,32 +193,51 @@ export default class UserService {
     return Result.Ok(await this.normalizeRelationships(userId, friendList));
   }
 
-  async getFriendList(userId: number, cursor: number, limit: number) {
-    const user = await this.userRepository.findOneBy({
-      userId: userId,
-    });
+  async getFriendList(
+    userId: number,
+    cursor: number,
+    limit: number,
+    searchTerm?: string
+  ) {
+    // Kiểm tra sự tồn tại của user
+    const user = await this.userRepository.findOneBy({ userId });
     if (!user) {
       return Result.notFound("USER_NOT_FOUND");
     }
-    const friendList = await this.relationshipRepository.find({
-      where: [
-        {
-          requesterId: userId,
-          relationType: RelationType.Friend,
-          relationshipId: LessThan(cursor),
-        },
-        {
-          addresseeId: userId,
-          relationType: RelationType.Friend,
-          relationshipId: LessThan(cursor),
-        },
-      ],
-      order: {
-        relationshipId: "DESC",
-      },
-      take: limit,
-    });
-    return Result.Ok(await this.normalizeRelationships(userId, friendList));
+
+    // Sử dụng QueryBuilder để truy vấn các mối quan hệ bạn bè
+    const qb = this.relationshipRepository
+      .createQueryBuilder("relationship")
+      // Join lấy thông tin của cả requester và addressee
+      .leftJoinAndSelect("relationship.requester", "requester")
+      .leftJoinAndSelect("relationship.addressee", "addressee")
+      .where("relationship.relationType = :friendType", {
+        friendType: RelationType.Friend,
+      })
+      .andWhere("relationship.relationshipId < :cursor", { cursor })
+      .andWhere(
+        "(relationship.requesterId = :userId OR relationship.addresseeId = :userId)",
+        { userId }
+      );
+
+    // Nếu có searchTerm, ta cần kiểm tra fullName ở cả hai phía, phụ thuộc vào chiều của mối quan hệ
+    if (searchTerm) {
+      qb.andWhere(
+        `(
+        (relationship.requesterId = :userId AND addressee.fullName LIKE :search) OR 
+        (relationship.addresseeId = :userId AND requester.fullName LIKE :search)
+      )`,
+        { userId, search: `%${searchTerm}%` }
+      );
+    }
+
+    qb.orderBy("relationship.relationshipId", "DESC").take(limit);
+
+    const friendRelationships = await qb.getMany();
+
+    return Result.Ok(
+      await this.normalizeRelationships(userId, friendRelationships)
+    );
   }
 
   async normalizeRelationships(

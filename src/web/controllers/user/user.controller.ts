@@ -129,7 +129,8 @@ export default class UserController {
     const userId = req.userId!;
     const cursor = Number(req.query.cursor);
     const limit = Number(req.query.limit) || 10;
-    const result = await this.userService.getFriendList(userId, cursor, limit);
+    const searchTerm = req.query.searchTerm as string || undefined;
+    const result = await this.userService.getFriendList(userId, cursor, limit, searchTerm);
     if (result.isSuccess) {
       const data = result.data || [];
 
