@@ -6,11 +6,7 @@ import {
   GroupPrivacyType,
   GroupChat,
 } from "../../../core/entities/group-chat.entity";
-import {
-  MemberRole,
-  MemberStatusType,
-  Member,
-} from "../../../core/entities/member.entity";
+import { MemberStatusType, Member } from "../../../core/entities/member.entity";
 import {
   MessageType,
   MessageStatus,
@@ -47,7 +43,6 @@ export default async function seedGroup(manager: EntityManager, faker: Faker) {
       memberId: 1,
       groupId: 1,
       userId: 3,
-      role: MemberRole.Creator,
       status: MemberStatusType.Active,
       timeJoin: new Date("2024-01-08 07:12:47"),
       nickName: "lam chym to 4",
@@ -56,7 +51,6 @@ export default async function seedGroup(manager: EntityManager, faker: Faker) {
       memberId: 2,
       groupId: 1,
       userId: 2,
-      role: MemberRole.Member,
       status: MemberStatusType.Active,
       timeJoin: new Date("2024-01-08 07:12:47"),
       nickName: "lam chym to 2",

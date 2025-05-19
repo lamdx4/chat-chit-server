@@ -49,12 +49,12 @@ export default class UserService {
       ],
     });
     if (!relationship) {
-      return Result.Ok({
+      return Result.ok({
         relationship: "NO_RELATIONSHIP",
         direction: null,
       });
     } else {
-      return Result.Ok({
+      return Result.ok({
         relationship: relationship.relationType,
         direction:
           relationship.requesterId === userId &&
@@ -111,7 +111,7 @@ export default class UserService {
     });
 
     await this.relationshipRepository.save(newRelationship);
-    return Result.Ok({
+    return Result.ok({
       relationshipId: newRelationship.relationshipId,
       targetUserId: targetUserId,
       relationType: RelationType.Pending,
@@ -140,7 +140,7 @@ export default class UserService {
       },
       take: limit,
     });
-    return Result.Ok(await this.normalizeRelationships(userId, friendReqList));
+    return Result.ok(await this.normalizeRelationships(userId, friendReqList));
   }
 
   async getFriendRequestSentList(
@@ -167,7 +167,7 @@ export default class UserService {
       },
       take: limit,
     });
-    return Result.Ok(await this.normalizeRelationships(userId, friendList));
+    return Result.ok(await this.normalizeRelationships(userId, friendList));
   }
 
   async getBlockList(userId: number, cursor: number, limit: number) {
@@ -190,7 +190,7 @@ export default class UserService {
       },
       take: limit,
     });
-    return Result.Ok(await this.normalizeRelationships(userId, friendList));
+    return Result.ok(await this.normalizeRelationships(userId, friendList));
   }
 
   async getFriendList(
@@ -235,7 +235,7 @@ export default class UserService {
 
     const friendRelationships = await qb.getMany();
 
-    return Result.Ok(
+    return Result.ok(
       await this.normalizeRelationships(userId, friendRelationships)
     );
   }
@@ -314,7 +314,7 @@ export default class UserService {
     if (updatedUser.affected === 0) {
       return Result.notFound("USER_NOT_FOUND");
     }
-    return Result.Ok({});
+    return Result.ok({});
   }
 
   async linkGoogleToAccount(userId: number, code: string) {
@@ -340,11 +340,11 @@ export default class UserService {
       return Result.notFound("USER_NOT_FOUND");
     }
 
-    return Result.Ok({});
+    return Result.ok({});
   }
 
   async getLinkUrlLogin(userId: number) {
-    return Result.Ok({
+    return Result.ok({
       url: this.ggHelper.getRedirectUri(userId),
     });
   }
@@ -375,7 +375,7 @@ export default class UserService {
       return Result.notFound("USER_NOT_FOUND");
     }
 
-    return Result.Ok(updatedUser);
+    return Result.ok(updatedUser);
   }
 
   async changeAvatar(userId: number, file: Express.Multer.File) {
@@ -419,7 +419,7 @@ export default class UserService {
       }
       await this.cloudService.deleteFile(oldAvatar);
     }
-    return Result.Ok({});
+    return Result.ok({});
   }
 
   async changeMyProfile(
@@ -454,7 +454,7 @@ export default class UserService {
       return Result.notFound("USER_NOT_FOUND");
     }
 
-    return Result.Ok(updatedUser);
+    return Result.ok(updatedUser);
   }
 
   async getMyProfile(userId: number) {
@@ -473,7 +473,7 @@ export default class UserService {
     if ("password" in user && user.hasOwnProperty("password")) {
       delete (user as { password?: string }).password;
     }
-    return Result.Ok(user);
+    return Result.ok(user);
   }
 
   async searchUsers(userName: string, phone: string) {
@@ -484,7 +484,7 @@ export default class UserService {
     if (!user) {
       return Result.notFound("USER_NOT_FOUND");
     }
-    return Result.Ok(mapToDto(UserDto, user));
+    return Result.ok(mapToDto(UserDto, user));
   }
 
   async acceptFriendRequest(userId: number, targetUserId: number) {
@@ -498,7 +498,7 @@ export default class UserService {
     }
     relationship.relationType = RelationType.Friend;
     await this.relationshipRepository.save(relationship);
-    return Result.Ok({});
+    return Result.ok({});
   }
 
   async rejectFriendRequest(userId: number, targetUserId: number) {
@@ -511,7 +511,7 @@ export default class UserService {
       return Result.notFound("RELATIONSHIP_NOT_FOUND");
     }
     await this.relationshipRepository.delete(relationship.relationshipId);
-    return Result.Ok({});
+    return Result.ok({});
   }
 
   async cancelMyFriendRequestSent(userId: number, targetUserId: number) {
@@ -524,7 +524,7 @@ export default class UserService {
       return Result.notFound("RELATIONSHIP_NOT_FOUND");
     }
     await this.relationshipRepository.delete(relationship.relationshipId);
-    return Result.Ok({});
+    return Result.ok({});
   }
 
   async removeFriend(userId: number, targetUserId: number) {
@@ -544,7 +544,7 @@ export default class UserService {
       return Result.notFound("RELATIONSHIP_NOT_FOUND");
     }
     await this.relationshipRepository.delete(relationship.relationshipId);
-    return Result.Ok({});
+    return Result.ok({});
   }
 
   async blockUser(userId: number, targetUserId: number) {
@@ -569,7 +569,7 @@ export default class UserService {
       relationType: RelationType.Block,
     });
 
-    return Result.Ok({});
+    return Result.ok({});
   }
 
   async unblockUser(userId: number, targetUserId: number) {
@@ -582,6 +582,6 @@ export default class UserService {
       return Result.notFound("RELATIONSHIP_NOT_FOUND");
     }
     await this.relationshipRepository.delete(relationship.relationshipId);
-    return Result.Ok({});
+    return Result.ok({});
   }
 }

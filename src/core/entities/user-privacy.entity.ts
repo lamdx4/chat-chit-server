@@ -15,7 +15,12 @@ export enum PhoneVisibility {
 export enum MessagingPermission {
   Everyone = "Everyone", // Ai cũng có thể nhắn tin
   FriendsOnly = "FriendsOnly", // Chỉ bạn bè được nhắn tin
-  OnlyMe = "OnlyMe", // Không ai ngoài bạn được nhắn tin (có thể chỉ là cài đặt mặc định để chặn tin nhắn từ người khác)
+}
+
+export enum BirthdayVisibility {
+  Everyone = "Everyone", // Ai cũng có thể xem ngày sinh
+  FriendsOnly = "FriendsOnly", // Chỉ bạn bè mới có thể xem ngày sinh
+  OnlyMe = "OnlyMe", // Chỉ bản thân bạn mới có thể xem ngày sinh
 }
 
 @Entity({ name: "UserPrivacy" })
@@ -33,9 +38,22 @@ export class UserPrivacy {
   @Column({
     type: "enum",
     enum: PhoneVisibility,
-    default: PhoneVisibility.FriendsOnly,
+    default: PhoneVisibility.Everyone,
   })
   phoneVisibility: PhoneVisibility;
+
+  @Column({
+    type: "enum",
+    enum: BirthdayVisibility,
+    default: BirthdayVisibility.Everyone,
+  })
+  birthdayVisibility: BirthdayVisibility;
+
+  @Column({
+    type: "bool",
+    default: true,
+  })
+  findByPhone: boolean;
 
   @Column({
     type: "enum",

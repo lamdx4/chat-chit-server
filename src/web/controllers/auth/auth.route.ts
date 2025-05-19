@@ -44,6 +44,7 @@ authRouter.post(
 
 authRouter.put(
   "/change-password",
+  authenticateMiddleware,
   changePasswordValidator,
   handleValidationErrors,
   asyncUtil(authController.changePassword.bind(authController))

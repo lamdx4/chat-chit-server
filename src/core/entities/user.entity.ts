@@ -21,8 +21,8 @@ export enum GenderType {
 }
 
 @Entity({ name: "User" })
-@Index("Phone", ["phone"], { unique: true })
-@Index("UserName", ["userName"], { unique: true })
+@Index("UQ_User_Phone", ["phone"], { unique: true })
+@Index("UQ_User_UserName", ["userName"], { unique: true })
 export class User {
   @PrimaryGeneratedColumn({ name: "userId" })
   userId: number;

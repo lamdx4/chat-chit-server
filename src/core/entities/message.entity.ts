@@ -39,12 +39,12 @@ export class Message {
   content: string;
 
   @Column({ type: "datetime" })
-  createAt: Date;
+  createdAt: Date;
 
   @Column({ type: "enum", enum: MessageType })
   type: MessageType;
 
-  @Column({ type: "enum", enum: MessageStatus })
+  @Column({ type: "enum", enum: MessageStatus, default: MessageStatus.Normal })
   status: MessageStatus;
 
   @Column({ nullable: true })

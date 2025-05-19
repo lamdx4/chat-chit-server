@@ -31,7 +31,7 @@ export class Result<T = void> {
     return new Result<T>(true, code, message, data);
   }
 
-  static Ok<T = void>(data?: T, message = "Success"): Result<T> {
+  static ok<T = void>(data?: T, message = "Success"): Result<T> {
     return new Result<T>(true, 200, message, data);
   }
 

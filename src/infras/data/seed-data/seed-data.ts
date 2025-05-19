@@ -4,6 +4,7 @@ import { fakerVI as faker } from "@faker-js/faker";
 import AppDataSource from "../data-source/data-source";
 import seedUser from "./seed-user";
 import seedGroup from "./seed-group";
+import { seedPermissionsForGroup } from "./seed-permission";
 
 export default async function seed() {
   await AppDataSource.initialize();
@@ -11,7 +12,9 @@ export default async function seed() {
   await AppDataSource.transaction(async (manager) => {
     await seedUser(manager, faker);
 
-    await seedGroup(manager, faker);
+    await seedPermissionsForGroup(manager);
+
+    // await seedGroup(manager, faker);
   });
 
   console.log("✅ Seed data completed!");

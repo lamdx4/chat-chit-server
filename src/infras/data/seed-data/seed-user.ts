@@ -1,15 +1,19 @@
-import { EntityManager } from "typeorm";
+import { DeepPartial, EntityManager } from "typeorm";
 import { GenderType, User } from "../../../core/entities/user.entity";
 import { Faker } from "@faker-js/faker/.";
 import {
   Relationship,
   RelationType,
 } from "../../../core/entities/relationship.entity";
+import {
+  MessagingPermission,
+  UserGroupJoinMode,
+} from "../../../core/entities/user-privacy.entity";
 
 export default async function seedUser(manager: EntityManager, faker: Faker) {
   const NUM_OF_USER = 10000;
 
-  const users = [
+  const users: DeepPartial<User>[] = [
     {
       userId: 1,
       phone: "084294363",
@@ -20,6 +24,16 @@ export default async function seedUser(manager: EntityManager, faker: Faker) {
       userName: "dasdaaasd",
       country: "Vietnam",
       isActive: true,
+      userPrivacy: {
+        groupJoinMode: faker.helpers.arrayElement([
+          UserGroupJoinMode.AutoJoinForFriends,
+          UserGroupJoinMode.InviteOnly,
+        ]),
+        messagingPermission: faker.helpers.arrayElement([
+          MessagingPermission.Everyone,
+          MessagingPermission.FriendsOnly,
+        ]),
+      },
     },
     {
       userId: 2,
@@ -30,6 +44,16 @@ export default async function seedUser(manager: EntityManager, faker: Faker) {
       userName: "wfdasdasd",
       country: "Vietnam",
       isActive: true,
+      userPrivacy: {
+        groupJoinMode: faker.helpers.arrayElement([
+          UserGroupJoinMode.AutoJoinForFriends,
+          UserGroupJoinMode.InviteOnly,
+        ]),
+        messagingPermission: faker.helpers.arrayElement([
+          MessagingPermission.Everyone,
+          MessagingPermission.FriendsOnly,
+        ]),
+      },
     },
     {
       userId: 3,
@@ -42,6 +66,16 @@ export default async function seedUser(manager: EntityManager, faker: Faker) {
       userName: "visaotoilagay",
       country: "Vietnam",
       isActive: true,
+      userPrivacy: {
+        groupJoinMode: faker.helpers.arrayElement([
+          UserGroupJoinMode.AutoJoinForFriends,
+          UserGroupJoinMode.InviteOnly,
+        ]),
+        messagingPermission: faker.helpers.arrayElement([
+          MessagingPermission.Everyone,
+          MessagingPermission.FriendsOnly,
+        ]),
+      },
     },
   ];
 
@@ -58,6 +92,16 @@ export default async function seedUser(manager: EntityManager, faker: Faker) {
       isActive: true,
       birthday: faker.date.birthdate(),
       bio: faker.lorem.sentence(),
+      userPrivacy: {
+        groupJoinMode: faker.helpers.arrayElement([
+          UserGroupJoinMode.AutoJoinForFriends,
+          UserGroupJoinMode.InviteOnly,
+        ]),
+        messagingPermission: faker.helpers.arrayElement([
+          MessagingPermission.Everyone,
+          MessagingPermission.FriendsOnly,
+        ]),
+      },
     });
   }
 
@@ -67,8 +111,8 @@ export default async function seedUser(manager: EntityManager, faker: Faker) {
   const seeds = [];
   for (let userId of userIds) {
     const userIdsHasBeenUsed: number[] = [];
-    for (let i = 1; i < 200; i++) {
-      const userIdUsed = faker.helpers.arrayElement(users).userId;
+    for (let i = 1; i < 1000; i++) {
+      const userIdUsed = faker.helpers.arrayElement(users).userId!;
 
       if (!userIdsHasBeenUsed.includes(userIdUsed)) {
         userIdsHasBeenUsed.push(userIdUsed);
@@ -98,5 +142,6 @@ export default async function seedUser(manager: EntityManager, faker: Faker) {
       }
     }
   }
+
   await manager.getRepository(Relationship).save(seeds);
 }

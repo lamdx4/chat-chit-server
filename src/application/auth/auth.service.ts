@@ -26,7 +26,7 @@ export default class AuthService {
     }
     user.password = newPassword;
     await this.userRepository.save(user);
-    return Result.Ok(user);
+    return Result.ok(user);
   }
 
   async register(
@@ -54,7 +54,7 @@ export default class AuthService {
     user.userName = userName;
     user.createdAt = new Date();
     await this.userRepository.save(user);
-    return Result.Ok(user);
+    return Result.ok(user);
   }
 
   async login(identifier: string, password: string, deviceLoginInfo: string) {
@@ -80,7 +80,7 @@ export default class AuthService {
         phoneNumber: user.phone,
       });
 
-      return Result.Ok({
+      return Result.ok({
         user,
         token,
       });
@@ -102,7 +102,7 @@ export default class AuthService {
           userId: user.userId,
           phoneNumber: user.phone,
         });
-        return Result.Ok({ accessToken: newToken });
+        return Result.ok({ accessToken: newToken });
       }
     }
     return Result.badRequest("INVALID_TOKEN");

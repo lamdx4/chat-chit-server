@@ -16,7 +16,7 @@ import {
     @PrimaryGeneratedColumn()
     pollId: number;
   
-    @Index({ unique: true })
+    @Index("UQ_Poll_MessageId", { unique: true })
     @Column()
     messageId: number;
   

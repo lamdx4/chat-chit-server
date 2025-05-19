@@ -10,9 +10,11 @@ import {
 } from "typeorm";
 import { Member } from "./member.entity";
 import { File } from "./file.entity";
+import { GroupRole } from "./group-role.entity";
+import { v6 } from "uuid";
 
 export enum GroupChatType {
-  Personal = "Personal",
+  Direct = "Direct",
   Group = "Group",
 }
 
@@ -55,14 +57,17 @@ export class GroupChat {
   @Column({ type: "enum", enum: GroupPrivacyType })
   groupPrivacyType: GroupPrivacyType;
 
-  @Column({ length: 12, nullable: true })
-  link?: string;
+  @Column({ type: "varchar", length: 100, nullable: false, default: v6() })
+  @Index({ unique: true })
+  link: string;
 
-  @OneToMany(() => Member, (member) => member.group)
+  @OneToMany(() => Member, (member) => member.group, { cascade: true })
   members: Member[];
 
   @OneToOne(() => File, (file) => file.groupAvatar)
   @JoinColumn({ name: "avatar" })
   avatarGroup: File;
-  
+
+  @OneToMany(() => GroupRole, (role) => role.group, { cascade: true })
+  roles: GroupRole[];
 }

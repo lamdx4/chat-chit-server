@@ -14,15 +14,13 @@ import { User } from "./user.entity";
 import { Message } from "./message.entity";
 import { ManipulateMember } from "./manipulate-member.entity";
 import { Reaction } from "./reaction.entity";
-export enum MemberRole {
-  Creator = "Creator",
-  Member = "Member",
-  Admin = "Admin",
-}
+import { GroupRole } from "./group-role.entity";
+
 
 export enum MemberStatusType {
+  Invited = "Invited",
+  AdminApprovalPending = "AdminApprovalPending",
   Active = "Active",
-  Pending = "Pending",
   Left = "Left",
   Banned = "Banned",
 }
@@ -54,13 +52,20 @@ export class Member {
   })
   lastReceivedMessageId?: number;
 
-  @Column({
-    name: "role",
-    type: "enum",
-    enum: MemberRole,
-    default: MemberRole.Member,
-  })
-  role: MemberRole;
+  // @Column({
+  //   name: "role",
+  //   type: "enum",
+  //   enum: MemberRole,
+  //   default: MemberRole.Member,
+  // })
+  // role: MemberRole;
+
+  @Column({ name: "roleId" })
+  roleId: number;
+
+  @ManyToOne(() => GroupRole, { cascade: true, onDelete: "CASCADE" })
+  @JoinColumn({ name: "roleId" })
+  role: GroupRole;
 
   @Column({
     name: "status",
@@ -79,12 +84,12 @@ export class Member {
 
   @Column({
     name: "nickName",
-    length: 21,
+    length: 36,
   })
   nickName: string;
 
   // Quan hệ
-  @ManyToOne(() => GroupChat, (group) => group.members)
+  @ManyToOne(() => GroupChat, (group) => group.members, { onDelete: "CASCADE" })
   @JoinColumn({ name: "groupId" })
   group: GroupChat;
 

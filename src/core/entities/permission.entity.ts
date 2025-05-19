@@ -16,6 +16,9 @@ export class Permission {
   @Column({ length: 50 })
   name: string;
 
+  @Column({ length: 100 })
+  description: string;
+
   @ManyToMany(() => GroupRole, (role) => role.permissions)
   roles: GroupRole[];
 }
