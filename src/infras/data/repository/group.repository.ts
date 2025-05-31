@@ -1,4 +1,4 @@
-import { v6 } from "uuid";
+import { v4, v6 } from "uuid";
 import { EntityManager, In } from "typeorm";
 import {
   GroupChat,
@@ -40,7 +40,7 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
       .leftJoin(
         Message,
         "latestMessage",
-        "latestMessage.memberId IN (SELECT m.memberId FROM Member m WHERE m.groupId = group.groupId)"
+        "latestMessage.memberId IN (SELECT m.memberId FROM Member m WHERE m.groupId = group.groupId) OR latestMessage.messageId IN (SELECT mm.messageId FROM ManipulateMember mm JOIN Member mem ON mm.memberId = mem.memberId WHERE mem.groupId = group.groupId)"
       )
       .select([
         "group.groupId",
@@ -71,48 +71,48 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
     const results = await queryBuilder
       .orderBy("MAX(latestMessage.messageId)", "DESC")
       .limit(limit + 1) // Fetch one extra for cursor pagination
-      .getRawMany();
+      .getMany();
 
     if (results.length === 0) {
       return [];
     }
 
-    // Get the full group entities with their members
-    const groupIds = results.map((r) => r.group_groupId);
-
-    const groups = await this.manager
-      .createQueryBuilder(GroupChat, "group")
-      .leftJoinAndSelect("group.members", "member")
-      .where("group.groupId IN (:...groupIds)", { groupIds })
-      .getMany();
-
-    // Sort groups according to latestMessageId order and add latestMessageId
-    const sortedGroups = groupIds
-      .map((id) => {
-        const group = groups.find((group) => group.groupId === id);
-        if (group) {
-          const result = results.find((r) => r.group_groupId === id);
-          (group as any).latestMessageId = result?.latestMessageId;
-        }
-        return group;
-      })
-      .filter(Boolean) as GroupChat[];
-
-    return sortedGroups;
+    return results;
   }
 
   async getLatestMessage(groupId: number): Promise<Message | null> {
-    return await this.manager
+    // First get the latest message
+    const message = await this.manager
       .createQueryBuilder(Message, "message")
-      .leftJoinAndSelect("message.ownerMemberId", "messageMember")
+      .leftJoinAndSelect("message.ownerMember", "messageMember")
       .leftJoinAndSelect("messageMember.user", "messageUser")
       .where(
-        "message.memberId IN (SELECT m.memberId FROM Member m WHERE m.groupId = :groupId)",
+        "message.memberId IN (SELECT m.memberId FROM Member m WHERE m.groupId = :groupId) OR message.messageId IN (SELECT mm.messageId FROM ManipulateMember mm JOIN Member mem ON mm.memberId = mem.memberId WHERE mem.groupId = :groupId)",
         { groupId }
       )
       .orderBy("message.messageId", "DESC")
       .limit(1)
       .getOne();
+
+    // If message exists, load its manipulateMembers separately
+    if (message) {
+      const messageWithManipulates = await this.manager
+        .createQueryBuilder(Message, "message")
+        .leftJoinAndSelect("message.manipulateMembers", "manipulateMembers")
+        .leftJoinAndSelect("manipulateMembers.member", "manipulateMember")
+        .leftJoinAndSelect("manipulateMember.user", "manipulateUser")
+        .where("message.messageId = :messageId", {
+          messageId: message.messageId,
+        })
+        .getOne();
+
+      if (messageWithManipulates) {
+        // Merge the manipulateMembers into the original message
+        message.manipulateMembers = messageWithManipulates.manipulateMembers;
+      }
+    }
+
+    return message;
   }
 
   async getUnreadMessageCount(
@@ -129,19 +129,31 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
       .getOne();
 
     if (!member || !member.lastReadMessageId) {
-      // If no lastReadMessageId, count all messages in group
+      // If no lastReadMessageId, count all messages in group where user is owner or mentioned
       return await this.manager
         .createQueryBuilder(Message, "message")
-        .leftJoin("message.ownerMemberId", "messageMember")
+        .leftJoin("message.ownerMember", "messageMember")
+        .leftJoin("message.manipulateMembers", "manipulateMembers")
+        .leftJoin("manipulateMembers.member", "manipulateMember")
         .where("messageMember.groupId = :groupId", { groupId })
+        .andWhere(
+          "(messageMember.userId = :userId OR manipulateMember.userId = :userId)",
+          { userId }
+        )
         .getCount();
     }
 
-    // Count messages newer than lastReadMessageId
+    // Count messages newer than lastReadMessageId where user is owner or mentioned
     return await this.manager
       .createQueryBuilder(Message, "message")
-      .leftJoin("message.ownerMemberId", "messageMember")
+      .leftJoin("message.ownerMember", "messageMember")
+      .leftJoin("message.manipulateMembers", "manipulateMembers")
+      .leftJoin("manipulateMembers.member", "manipulateMember")
       .where("messageMember.groupId = :groupId", { groupId })
+      .andWhere(
+        "(messageMember.userId = :userId OR manipulateMember.userId = :userId)",
+        { userId }
+      )
       .andWhere("message.messageId > :lastReadMessageId", {
         lastReadMessageId: member.lastReadMessageId,
       })
@@ -156,11 +168,10 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
         createAt: new Date(),
         groupType: GroupChatType.Group,
         groupPrivacyType: GroupPrivacyType.Public,
+        link: v4(),
       });
 
       group = await transactionalEntityManager.save(group);
-
-      console.log("Group created:", group);
 
       // 2. Tạo các role mặc định gắn với groupId
       const roles = [
@@ -178,8 +189,6 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
         ),
       ];
       await transactionalEntityManager.getRepository(GroupRole).save(roles);
-
-      console.log("Roles created:", roles);
 
       // 3. Thêm thành viên vào group
       const userWithPrivacy = await transactionalEntityManager
@@ -247,6 +256,7 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
         content: strMessage,
         type: MessageType.Notification,
         manipulateMembers: manipulateMembers,
+        memberId: _members.find((m) => m.userId === userId)?.memberId,
       });
 
       // Lưu message vào CSDL
@@ -366,11 +376,36 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
   async getLatestMessageId(groupId: number): Promise<number | null> {
     const result = await this.manager
       .createQueryBuilder(Message, "message")
-      .leftJoin("message.ownerMemberId", "messageMember")
+      .leftJoin("message.ownerMember", "messageMember")
       .select("MAX(message.messageId)", "latestMessageId")
       .where("messageMember.groupId = :groupId", { groupId })
       .getRawOne();
 
     return result?.latestMessageId || null;
+  }
+
+  async getCurrentMember(groupId: number, userId: number): Promise<Member | null> {
+    return await this.manager
+      .createQueryBuilder(Member, "member")
+      .leftJoinAndSelect("member.user", "user")
+      .leftJoinAndSelect("member.role", "role")
+      .where("member.groupId = :groupId AND member.userId = :userId", {
+        groupId,
+        userId,
+      })
+      .getOne();
+  }
+
+  /**
+   * Get the count of active members in a group
+   * @param groupId - The ID of the group
+   * @returns Promise<number> - Number of active members
+   */
+  async getMemberCount(groupId: number): Promise<number> {
+    return await this.manager
+      .createQueryBuilder(Member, "member")
+      .where("member.groupId = :groupId", { groupId })
+      .andWhere("member.status = :status", { status: MemberStatusType.Active })
+      .getCount();
   }
 }

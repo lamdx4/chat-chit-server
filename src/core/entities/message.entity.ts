@@ -53,7 +53,7 @@ export class Message {
   @Column("tinyint", { default: 0 })
   isPin: boolean;
 
-  @Column({ nullable: true })
+  @Column()
   memberId: number;
 
   @Column({ nullable: true })

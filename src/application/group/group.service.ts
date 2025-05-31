@@ -1,4 +1,5 @@
 import { Brackets } from "typeorm";
+import { plainToClass } from "class-transformer";
 import GroupRepository from "../../infras/data/repository/group.repository";
 import UserRepository from "../../infras/data/repository/user.repository";
 import CreateGroupRequest from "../../web/controllers/group/reqs/create-group.request";
@@ -6,9 +7,8 @@ import { Result } from "../../web/utils/result";
 import RelationshipRepository from "../../infras/data/repository/relationship.repository";
 import { RelationType } from "../../core/entities/relationship.entity";
 import { GroupChat } from "../../core/entities/group-chat.entity";
-import { GroupListItemDto } from "./dtos/group-list.dto";
+import { GroupListItemDto, MessageDto, MemberDto } from "./dtos/group-list.dto";
 import { CursorPaging } from "../../web/utils/response-pagination";
-import { plainToClass } from "class-transformer";
 import { Message } from "../../core/entities/message.entity";
 import { Member } from "../../core/entities/member.entity";
 
@@ -20,6 +20,44 @@ export default class GroupService {
     this.groupRepository = new GroupRepository(); // Initialize the repository
     this.userRepository = new UserRepository(); // Initialize the user repository
     this.relationshipRepository = new RelationshipRepository(); // Initialize the relationship repository
+  }
+
+  /**
+   * Maps a Message entity to MessageDto using class-transformer
+   * @param message - The message entity or null
+   * @returns MessageDto or undefined if message is null
+   */
+  private mapMessageToDto(message: Message | null): MessageDto | undefined {
+    if (!message) return undefined;
+
+    const dto = plainToClass(MessageDto, message, {
+      excludeExtraneousValues: true,
+      enableImplicitConversion: true,
+    });
+
+    // Set sender as alias for ownerMember for backward compatibility
+    if (message.ownerMember) {
+      dto.sender = plainToClass(MemberDto, message.ownerMember, {
+        excludeExtraneousValues: true,
+        enableImplicitConversion: true,
+      });
+    }
+
+    return dto;
+  }
+
+  /**
+   * Maps a Member entity to MemberDto using class-transformer
+   * @param member - The member entity or null
+   * @returns MemberDto or undefined if member is null
+   */
+  private mapMemberToDto(member: Member | null): MemberDto | undefined {
+    if (!member) return undefined;
+
+    return plainToClass(MemberDto, member, {
+      excludeExtraneousValues: true,
+      enableImplicitConversion: true,
+    });
   }
 
   // Define methods for group-related operations here
@@ -51,7 +89,6 @@ export default class GroupService {
     try {
       g = await this.groupRepository.createGroup(userId, groupData);
     } catch (e) {
-      console.log(e);
       return Result.fail(500, "CREATE_GROUP_FAILED");
     }
 
@@ -72,76 +109,96 @@ export default class GroupService {
     // Logic to delete a group
   }
 
+  /**
+   * Get list of groups that a user is a member of with cursor-based pagination
+   * @param userId - The ID of the user
+   * @param cursor - The cursor for pagination (latest message ID)
+   * @param limit - Maximum number of groups to return (1-100)
+   * @returns Result containing paginated list of groups with metadata
+   */
   async getListGroupByUserId(
     userId: number,
     cursor: number = Number.MAX_SAFE_INTEGER,
     limit: number = 20
   ): Promise<Result<CursorPaging<GroupListItemDto, number>>> {
     try {
+      // Input validation
+      if (!userId || userId <= 0) {
+        return Result.badRequest("INVALID_USER_ID");
+      }
+
+      if (limit <= 0 || limit > 100) {
+        return Result.badRequest("INVALID_LIMIT", {
+          limit: ["Limit must be between 1 and 100"],
+        });
+      }
+
+      if (cursor < 0) {
+        return Result.badRequest("INVALID_CURSOR", {
+          cursor: ["Cursor must be non-negative"],
+        });
+      }
+
       const groups = await this.groupRepository.getMyListGroupByUserId(
         userId,
         cursor !== Number.MAX_SAFE_INTEGER ? cursor : undefined,
         limit
       );
 
-      // Map to GroupListItemDto format
-      const groupListItems: GroupListItemDto[] = [];
+      // Handle cursor pagination
+      // Repository fetches limit + 1 records to check if there's a next page
+      const hasNextPage = groups.length > limit;
 
-      for (const group of groups) {
-        // Get the current user's member record
-        const currentMember = group.members.find(m => m.userId === userId);
-        
-        if (!currentMember) continue;
+      const actualGroups = hasNextPage ? groups.slice(0, limit) : groups;
 
-        // Get latest message for this group
-        const latestMessage = await this.groupRepository.getLatestMessage(group.groupId);
+      // Process only the actual groups (without the extra record)
+      const groupListItems = await Promise.all(
+        actualGroups.map(async (group): Promise<GroupListItemDto> => {
+          const [latestMessage, unreadCount, currentMember, memberCount] =
+            await Promise.all([
+              this.groupRepository.getLatestMessage(group.groupId),
+              this.groupRepository.getUnreadMessageCount(group.groupId, userId),
+              this.groupRepository.getCurrentMember(group.groupId, userId),
+              this.groupRepository.getMemberCount(group.groupId),
+            ]);
 
-        // Get unread count for this group
-        const unreadCount = await this.groupRepository.getUnreadMessageCount(group.groupId, userId);
+          // Validate that currentMember exists - this should always be true for groups the user is a member of
+          if (!currentMember) {
+            throw new Error(
+              `User ${userId} is not a member of group ${group.groupId}`
+            );
+          }
 
-        // Create the DTO
-        const groupListItem: GroupListItemDto = {
-          groupId: group.groupId,
-          name: group.name,
-          createAt: group.createAt,
-          groupChatStatus: group.groupChatStatus,
-          avatar: group.avatar,
-          groupType: group.groupType,
-          groupPrivacyType: group.groupPrivacyType,
-          link: group.link,
-          latestMessage: latestMessage ? {
-            messageId: latestMessage.messageId,
-            content: latestMessage.content,
-            createdAt: latestMessage.createdAt,
-            type: latestMessage.type,
-            status: latestMessage.status,
-            replyMessageId: latestMessage.replyMessageId,
-            isPin: latestMessage.isPin,
-            memberId: latestMessage.memberId,
-            fileId: latestMessage.fileId
-          } : undefined,
-          currentMember: {
-            memberId: currentMember.memberId,
-            groupId: currentMember.groupId,
-            userId: currentMember.userId,
-            lastReadMessageId: currentMember.lastReadMessageId,
-            lastReceivedMessageId: currentMember.lastReceivedMessageId,
-            roleId: currentMember.roleId,
-            status: currentMember.status,
-            timeJoin: currentMember.timeJoin,
-            nickName: currentMember.nickName
-          },
-          unreadCount,
-          latestMessageId: (group as any).latestMessageId // For cursor
-        };
+          const mappedCurrentMember = this.mapMemberToDto(currentMember);
+          if (!mappedCurrentMember) {
+            throw new Error(
+              `Failed to map current member for user ${userId} in group ${group.groupId}`
+            );
+          }
 
-        groupListItems.push(groupListItem);
-      }
+          return plainToClass(
+            GroupListItemDto,
+            {
+              ...group,
+              latestMessage: this.mapMessageToDto(latestMessage),
+              currentMember: mappedCurrentMember,
+              unreadCount,
+              latestMessageId: (group as any).latestMessageId, // For cursor
+              memberCount,
+            },
+            {
+              excludeExtraneousValues: true,
+              enableImplicitConversion: true,
+            }
+          );
+        })
+      );
 
-      // Get the next cursor from the last item's latestMessageId
-      const nextCursor = groupListItems.length > 0 
-        ? groupListItems[groupListItems.length - 1].latestMessageId || null
-        : null;
+      // Set up pagination response
+      const nextCursor =
+        hasNextPage && groupListItems.length > 0
+          ? groupListItems[groupListItems.length - 1].latestMessage?.messageId || null
+          : null;
 
       const paging = new CursorPaging<GroupListItemDto, number>(
         groupListItems,
@@ -151,6 +208,17 @@ export default class GroupService {
       return Result.ok(paging);
     } catch (error) {
       console.error("Error getting group list:", error);
+
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes("not a member of group")) {
+          return Result.badRequest("USER_NOT_MEMBER_OF_GROUP");
+        }
+        if (error.message.includes("Failed to map")) {
+          return Result.fail(500, "DATA_MAPPING_ERROR");
+        }
+      }
+
       return Result.fail(500, "FAILED_TO_GET_GROUP_LIST");
     }
   }
