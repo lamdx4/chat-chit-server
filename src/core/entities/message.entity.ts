@@ -38,7 +38,7 @@ export class Message {
   @Column({ length: 100 })
   content: string;
 
-  @Column({ type: "datetime" })
+  @Column({ type: "datetime", default: () => "CURRENT_TIMESTAMP" })
   createdAt: Date;
 
   @Column({ type: "enum", enum: MessageType })
@@ -53,7 +53,7 @@ export class Message {
   @Column("tinyint", { default: 0 })
   isPin: boolean;
 
-  @Column()
+  @Column({ nullable: true })
   memberId: number;
 
   @Column({ nullable: true })
@@ -66,7 +66,7 @@ export class Message {
 
   @ManyToOne(() => Member, (member) => member.messages, { onDelete: "CASCADE" })
   @JoinColumn({ name: "memberId" })
-  ownerMemberId: Member;
+  ownerMember?: Member;
 
   @ManyToOne(() => Message, (message) => message.inverseReplyMessage)
   @JoinColumn({ name: "replyMessageId" })
@@ -80,7 +80,8 @@ export class Message {
 
   @OneToMany(
     () => ManipulateMember,
-    (manipulateMember) => manipulateMember.member
+    (manipulateMember) => manipulateMember.message,
+    { cascade: true }
   )
   manipulateMembers: ManipulateMember[];
 

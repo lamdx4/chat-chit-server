@@ -16,4 +16,11 @@ groupRouter.post(
   handleValidationErrors,
   asyncUtil(groupController.createGroup.bind(groupController))
 );
+
+groupRouter.get(
+  "/list",
+  authenticateMiddleware,
+  asyncUtil(groupController.getMyGroupList.bind(groupController))
+);
+
 export default groupRouter;

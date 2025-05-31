@@ -111,7 +111,7 @@ export class Member {
   )
   manipulateMembers: ManipulateMember[];
 
-  @OneToMany(() => Message, (message) => message.ownerMemberId)
+  @OneToMany(() => Message, (message) => message.ownerMember)
   messages: Message[];
 
   @OneToMany(() => Reaction, (reaction) => reaction.member)

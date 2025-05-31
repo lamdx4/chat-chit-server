@@ -19,4 +19,17 @@ export default class GroupController {
       return res.status(r.code).json(ResponseData.fail(r.message, r.errors));
     }
   }
+
+  async getMyGroupList(req: Request, res: Response, next: NextFunction) {
+    const userId = req.userId!;
+    const cursor = parseInt(req.query.cursor as string) || Number.MAX_SAFE_INTEGER;
+    const limit = parseInt(req.query.limit as string) || 20;
+    
+    const result = await this.groupService.getListGroupByUserId(userId, cursor, limit);
+    if (result.isSuccess) {
+      return res.status(200).json(ResponseData.success(result.data!.toResponse(), result.message));
+    } else {
+      return res.status(result.code).json(ResponseData.fail(result.message, result.errors));
+    }
+  }
 }
