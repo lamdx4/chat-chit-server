@@ -14,7 +14,7 @@ export default class StoryController {
    * Handle create story request
    */
   async createStory(req: Request, res: Response, next: NextFunction) {
-    const userId = req.userId!; // Should be set by auth middleware
+    const userId = req.userId!; 
     const { text, visibility } = req.body;
     const file = req.file;
 
@@ -23,6 +23,16 @@ export default class StoryController {
       return res.status(400).json(
         ResponseData.fail("FILE_REQUIRED", {
           file: ["File is required."]
+        })
+      );
+    }
+
+    // Validate file size (must be less than 50MB)
+    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+    if (file.size > maxSize) {
+      return res.status(400).json(
+        ResponseData.fail("FILE_TOO_LARGE", {
+          file: ["File size must be less than 50MB."]
         })
       );
     }
@@ -54,4 +64,29 @@ export default class StoryController {
       return res.status(result.code ?? 500).json(ResponseData.fail(result.message, result.errors));
     }
   }
+
+  /**
+   * Get stories from friends
+   */
+  async getFriendStories(req: Request, res: Response, next: NextFunction) {
+    const userId = req.userId!;
+
+    const result = await this.storyService.getFriendStories(userId);
+
+    if (result.isSuccess) {
+      return res.status(200).json(ResponseData.success(result.data, result.message));
+    } else {
+      return res.status(result.code ?? 500).json(ResponseData.fail(result.message, result.errors));
+    }
+  }
+
+
+
+
+
+
+
+
+
+
 }

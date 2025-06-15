@@ -32,4 +32,11 @@ storyRouter.post(
 );
 
 
+storyRouter.get(
+  "/friends",
+  authenticateMiddleware,
+  asyncUtil(storyController.getFriendStories.bind(storyController))
+);
+
+
 export default storyRouter;

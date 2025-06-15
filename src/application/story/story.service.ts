@@ -4,6 +4,7 @@ import CreateStoryRequest from "../../web/controllers/story/reqs/create-story.re
 import { CloudService } from "../../infras/aws-s3/aws-s3.service";
 import fs from "fs";
 import Stream from "stream";
+import { StoryFriendDto } from "./dtos/story-list.dto";
 
 export default class StoryService {
   private storyRepository: StoryRepository;
@@ -63,4 +64,27 @@ export default class StoryService {
       return Result.fail(500, "Failed to create story due to server error");
     }
   }
+
+  /**
+   * Get stories from friends within the last 24 hours.
+   * @param currentUserId - The ID of the current user
+   * @returns             - List of stories from friends
+   */
+  async getFriendStories(currentUserId: number): Promise<Result<StoryFriendDto[]>> {
+    try {
+      const stories = await this.storyRepository.getFriendStories(currentUserId);
+      return Result.ok(stories);
+    } catch (error) {
+      console.error("StoryService Error:", error);
+      return Result.fail(500, "Failed to get friend stories due to server error");
+    }
+  }
+
+
+
+
+
+
+
+
 }
