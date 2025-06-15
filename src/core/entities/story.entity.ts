@@ -27,11 +27,14 @@ export class Story {
   @Column({ nullable: false })
   ownerId: number;
 
-  @Column({ type: "datetime", default: () => "CURRENT_TIMESTAMP" })
-  createAt: Date;
-
-  @Column({ type: "varchar", length: 70, nullable: false })
+  @Column({ type: "varchar", length: 512, nullable: false })
   content: string;
+
+  @Column({ type: "enum", enum: ["image", "video"], default: "image" })
+  type: "image" | "video";
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  text?: string;
 
   @Column({ type: "int", nullable: false, default: 0 })
   visibility: StoryVisibility;
