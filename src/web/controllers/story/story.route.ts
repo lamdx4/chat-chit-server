@@ -50,5 +50,10 @@ storyRouter.post(
   asyncUtil(storyController.viewStory.bind(storyController))
 );
 
+storyRouter.get(
+  "/user/:targetUserId",
+  authenticateMiddleware,
+  asyncUtil(storyController.getStoriesByUserId.bind(storyController))
+);
 
 export default storyRouter;

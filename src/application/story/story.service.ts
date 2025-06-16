@@ -49,7 +49,7 @@ export default class StoryService {
         contentUrl = CloudService.getInstance().getStaticUrl(s3Key);
       }
 
-      // 6. Save story to database, using the content URL
+      // Save story to database, using the content URL
       const story = await this.storyRepository.createStory({
         ownerId: userId,
         content: contentUrl,
@@ -189,6 +189,67 @@ export default class StoryService {
     } catch (error) {
       console.error("StoryService Error:", error);
       return Result.fail(500, "Failed to record story view due to server error");
+    }
+  }
+
+
+
+  /**
+   * Get stories by specific user ID
+   * @param userId - The ID of the user whose stories to retrieve
+   * @param currentUserId - The ID of the current user viewing the stories
+   * @returns - Result with list of stories from the specified user
+   */
+  async getStoriesByUserId(userId: number, currentUserId: number): Promise<Result<UserStoryDto>> {
+    try {
+      const results = await this.storyRepository.getStoriesByUserId(userId, currentUserId) as FriendsStoryListRaw[];
+      
+      if (results.length === 0) {
+        return Result.fail(404, "User not found or has no stories");
+      }
+
+      // Process the first row to get user info
+      const firstRow = results[0];
+      const stories: {
+        storyId: number;
+        type: "image" | "video";
+        content: string;
+        text: string;
+        createdAt: Date;
+        isViewed: boolean;
+      }[] = [];
+      
+      let totalStories = 0;
+      let viewedStories = 0;
+      
+      for (const row of results) {
+        stories.push({
+          storyId: row.story_storyId,
+          type: row.story_type,
+          content: row.story_content,
+          text: row.story_text,
+          createdAt: row.story_createdAt,
+          isViewed: row.story_isViewed === 1,
+        });
+        
+        totalStories++;
+        if (row.story_isViewed === 1) {
+          viewedStories++;
+        }
+      }
+
+      const userStory: UserStoryDto = {
+        userId: firstRow.user_userId,
+        userName: firstRow.user_userName,
+        avatar: firstRow.user_avatar,
+        isViewed: totalStories > 0 && viewedStories === totalStories,
+        stories: stories.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      };
+
+      return Result.ok(userStory);
+    } catch (error) {
+      console.error("StoryService Error:", error);
+      return Result.fail(500, "Failed to get user stories due to server error");
     }
   }
 

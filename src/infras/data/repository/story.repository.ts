@@ -129,5 +129,88 @@ export default class StoryRepository extends BaseRepository<Story> {
   async insertStoryView(storyId: number, viewerId: number, viewAt: Date) {
     return this.manager.getRepository("StoryView").save({ storyId, viewerId, viewAt });
   }
+
+  /**
+   * Get stories by specific user ID
+   */
+  async getStoriesByUserId(userId: number, currentUserId: number): Promise<FriendsStoryListRaw[]> {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    let queryBuilder = this.manager
+      .createQueryBuilder("User", "user")
+      .select([
+        "user.userId",
+        "user.userName", 
+        "user.avatar",
+        "story.storyId",
+        "story.type",
+        "story.content",
+        "story.text",
+        "story.createdAt",
+        "CASE WHEN view.viewerId IS NOT NULL THEN 1 ELSE 0 END as story_isViewed"
+      ])
+      .innerJoin("Story", "story", "story.ownerId = user.userId")
+      .leftJoin("StoryView", "view", "view.storyId = story.storyId AND view.viewerId = :currentUserId", { currentUserId })
+      .where("user.userId = :userId", { userId })
+      .andWhere("story.createdAt >= :since", { since });
+
+    // If viewing someone else's stories, check relationship and visibility
+    if (userId !== currentUserId) {
+      queryBuilder = queryBuilder
+      .leftJoin("Relationship", "rel", 
+        "(rel.requesterId = :currentUserId AND rel.addresseeId = user.userId AND rel.relationType = 'Friend') OR " +
+        "(rel.addresseeId = :currentUserId AND rel.requesterId = user.userId AND rel.relationType = 'Friend')",
+        { currentUserId }
+      )
+      .andWhere("(rel.relationType IS NOT NULL OR story.visibility = 0)");
+    }
+
+    const results = await queryBuilder
+      .orderBy("story.createdAt", "DESC")
+      .getRawMany() as FriendsStoryListRaw[];
+
+    return results;
+  }
+
+
+  /**
+   * Get recent stories including friends' stories and public stories
+   */
+  async getRecentStories(currentUserId: number): Promise<FriendsStoryListRaw[]> {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const results = await this.manager
+      .createQueryBuilder("User", "user")
+      .select([
+        "user.userId",
+        "user.userName", 
+        "user.avatar",
+        "story.storyId",
+        "story.type",
+        "story.content",
+        "story.text",
+        "story.createdAt",
+        "CASE WHEN view.viewerId IS NOT NULL THEN 1 ELSE 0 END as story_isViewed"
+      ])
+      .innerJoin("Story", "story", "story.ownerId = user.userId")
+      .leftJoin("Relationship", "rel", 
+        "(rel.requesterId = :currentUserId AND rel.addresseeId = user.userId AND rel.relationType = 'Friend') OR " +
+        "(rel.addresseeId = :currentUserId AND rel.requesterId = user.userId AND rel.relationType = 'Friend')",
+        { currentUserId }
+      )
+      .leftJoin("StoryView", "view", "view.storyId = story.storyId AND view.viewerId = :currentUserId", { currentUserId })
+      .where("story.createdAt >= :since", { since })
+      .andWhere("(rel.relationType = 'Friend' OR story.visibility = 0)")
+      .orderBy("story.createdAt", "DESC")
+      .getRawMany() as FriendsStoryListRaw[];
+
+    return results;
+  }
   
+
+
+
+
+
+
 }
