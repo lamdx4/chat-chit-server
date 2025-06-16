@@ -56,4 +56,22 @@ storyRouter.get(
   asyncUtil(storyController.getStoriesByUserId.bind(storyController))
 );
 
+storyRouter.get(
+  "/recent",
+  authenticateMiddleware,
+  asyncUtil(storyController.getRecentStories.bind(storyController))
+);
+
+storyRouter.post(
+  "/:storyId/react",
+  authenticateMiddleware,
+  asyncUtil(storyController.reactToStory.bind(storyController))
+);
+
+storyRouter.get(
+  "/:storyId/interactions",
+  authenticateMiddleware,
+  asyncUtil(storyController.getStoryInteractions.bind(storyController))
+);
+
 export default storyRouter;

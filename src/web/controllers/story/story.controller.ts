@@ -143,6 +143,70 @@ export default class StoryController {
     }
   }
 
+  /**
+   * Get recent stories
+   */
+  async getRecentStories(req: Request, res: Response, next: NextFunction) {
+    const userId = req.userId!;
+
+    const result = await this.storyService.getRecentStories(userId);
+
+    if (result.isSuccess) {
+      return res.status(200).json(ResponseData.success(result.data, result.message));
+    } else {
+      return res.status(result.code ?? 500).json(ResponseData.fail(result.message, result.errors));
+    }
+  }
+
+  /**
+   * Handle story react request
+   */
+  async reactToStory(req: Request, res: Response, next: NextFunction) {
+    const userId = req.userId!;
+    const { storyId } = req.params;
+
+    // Validate storyId
+    if (!storyId || isNaN(Number(storyId))) {
+      return res.status(400).json(
+        ResponseData.fail("INVALID_STORY_ID", {
+          storyId: ["Story ID is required and must be a valid number."]
+        })
+      );
+    }
+
+    const result = await this.storyService.insertStoryReact(Number(storyId), userId);
+
+    if (result.isSuccess) {
+      return res.status(200).json(ResponseData.success(result.data, result.message));
+    } else {
+      return res.status(result.code ?? 500).json(ResponseData.fail(result.message, result.errors));
+    }
+  }
+
+  /**
+   * Get story interactions
+   */
+  async getStoryInteractions(req: Request, res: Response, next: NextFunction) {
+    const userId = req.userId!;
+    const { storyId } = req.params;
+
+    // Validate storyId
+    if (!storyId || isNaN(Number(storyId))) {
+      return res.status(400).json(
+        ResponseData.fail("INVALID_STORY_ID", {
+          storyId: ["Story ID is required and must be a valid number."]
+        })
+      );
+    }
+
+    const result = await this.storyService.getStoryInteractions(Number(storyId), userId);
+
+    if (result.isSuccess) {
+      return res.status(200).json(ResponseData.success(result.data, result.message));
+    } else {
+      return res.status(result.code ?? 500).json(ResponseData.fail(result.message, result.errors));
+    }
+  }
 
 
 

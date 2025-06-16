@@ -1,11 +1,11 @@
-import StoryRepository from "../../infras/data/repository/story.repository";
+import StoryRepository, { StoryInteractionRaw } from "../../infras/data/repository/story.repository";
 import { Result } from "../../web/utils/result";
 import CreateStoryRequest from "../../web/controllers/story/reqs/create-story.request";
 import { CloudService } from "../../infras/aws-s3/aws-s3.service";
 import fs from "fs";
 import Stream from "stream";
-import { StoryFriendDto, UserStoryDto } from "./dtos/story-list.dto";
-import { FriendStoryRaw, FriendsStoryListRaw } from "../../infras/data/repository/story.repository";
+import { StoryFriendDto, UserStoryDto, StoryWithUserDto, StoryReactionDto } from "./dtos/story-list.dto";
+import { FriendStoryRaw, FriendsStoryListRaw, StoryWithUserRaw } from "../../infras/data/repository/story.repository";
 
 export default class StoryService {
   private storyRepository: StoryRepository;
@@ -111,6 +111,7 @@ export default class StoryService {
           text: string;
           createdAt: Date;
           isViewed: boolean;
+          isReacted: boolean;
         }[];
         totalStories: number;
         viewedStories: number;
@@ -138,6 +139,7 @@ export default class StoryService {
           text: row.story_text,
           createdAt: row.story_createdAt,
           isViewed: row.story_isViewed === 1,
+          isReacted: row.story_isReacted === 1
         });
         
         friend.totalStories++;
@@ -154,6 +156,7 @@ export default class StoryService {
           avatar: friend.avatar,
           isViewed: friend.totalStories > 0 && friend.viewedStories === friend.totalStories,
           stories: friend.stories
+          
         }))
         .sort((a, b) => {
           const aLatest = a.stories.length > 0 ? new Date(a.stories[0].createdAt).getTime() : 0;
@@ -217,6 +220,7 @@ export default class StoryService {
         text: string;
         createdAt: Date;
         isViewed: boolean;
+        isReacted: boolean;
       }[] = [];
       
       let totalStories = 0;
@@ -230,6 +234,7 @@ export default class StoryService {
           text: row.story_text,
           createdAt: row.story_createdAt,
           isViewed: row.story_isViewed === 1,
+          isReacted: row.story_isReacted === 1
         });
         
         totalStories++;
@@ -252,5 +257,92 @@ export default class StoryService {
       return Result.fail(500, "Failed to get user stories due to server error");
     }
   }
+
+  /**
+   * Get recent stories from friends and public stories within the last 24 hours.
+   * @param currentUserId - The ID of the current user
+   * @returns - Result with list of recent stories
+   */
+  async getRecentStories(currentUserId: number): Promise<Result<StoryWithUserDto[]>> {
+    try {
+      const results = await this.storyRepository.getRecentStories(currentUserId) as StoryWithUserRaw[];
+      
+      const stories = results.map((row: StoryWithUserRaw) => 
+        new StoryWithUserDto({
+          storyId: row.story_storyId,
+          type: row.story_type,
+          content: row.story_content,
+          text: row.story_text,
+          createdAt: row.story_createdAt,
+          isViewed: row.story_isViewed === 1,
+          visibility: row.story_visibility,
+          isReacted: row.story_isReacted === 1,
+          user: {
+            userId: row.user_userId,
+            userName: row.user_userName,
+            avatar: row.user_avatar,
+            isFriend: row.user_isFriend === 1
+          }
+        })
+      );
+      
+      return Result.ok(stories);
+    } catch (error) {
+      console.error("StoryService Error:", error);
+      return Result.fail(500, "Failed to get recent stories due to server error");
+    }
+  }
+
+
+  /**
+   * React to a story by a user.
+   * @param storyId - The ID of the story being reacted to
+   * @param reacterId - The ID of the user reacting to the story
+   * @returns - Result.ok(reaction) if successful, Result.fail if error
+   */
+  async insertStoryReact(storyId: number, reacterId: number): Promise<Result<boolean>> {
+    try {
+      // Check if the user has already reacted to this story
+      const existingReaction = await this.storyRepository.findStoryReact(storyId, reacterId);
+      
+      if (existingReaction) {
+        return Result.ok(true); // Already reacted, no need to insert
+      }
+
+      // Insert new story reaction
+      await this.storyRepository.insertStoryReact(storyId, reacterId);
+      return Result.ok(true);
+    } catch (error) {
+      console.error("StoryService Error:", error);
+      return Result.fail(500, "Failed to react to story due to server error");
+    }
+  }
+  
+  /**
+   * Get story interactions (views and reactions) for a specific story.
+   * @param storyId - The ID of the story to get interactions for
+   * @param userId - The ID of the user requesting the interactions
+   * @returns - Result with list of story interactions
+   */
+  async getStoryInteractions(storyId: number, userId: number): Promise<Result<StoryReactionDto[]>> {
+    try {
+      const results = await this.storyRepository.getStoryInteractions(storyId, userId) as StoryInteractionRaw[];
+      
+      const reactions: StoryReactionDto[] = results.map(row => 
+        new StoryReactionDto({
+          userId: row.user_userId,
+          userName: row.user_userName,
+          avatar: row.user_avatar,
+          isReacted: row.react_isReacted == 1
+        })
+      );
+      
+      return Result.ok(reactions);
+    } catch (error) {
+      console.error("StoryService Error:", error);
+      return Result.fail(500, "Failed to get story interactions due to server error");
+    }
+  }
+
 
 }

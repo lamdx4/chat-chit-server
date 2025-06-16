@@ -39,6 +39,9 @@ export class Story {
   @Column({ type: "int", nullable: false, default: 0 })
   visibility: StoryVisibility;
 
+  @Column({ type: "boolean", default: false })
+  isArchived: boolean;
+
   @ManyToOne(() => User)
   @Index("ownerId")
   @JoinColumn({ name: "ownerId" })
