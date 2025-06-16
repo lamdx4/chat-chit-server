@@ -110,6 +110,7 @@ export default class StoryService {
           content: string;
           text: string;
           createdAt: Date;
+          isViewed: boolean;
         }[];
         totalStories: number;
         viewedStories: number;
@@ -136,10 +137,11 @@ export default class StoryService {
           content: row.story_content,
           text: row.story_text,
           createdAt: row.story_createdAt,
+          isViewed: row.story_isViewed === 1,
         });
         
         friend.totalStories++;
-        if (row.isViewedByCurrentUser === 1) {
+        if (row.story_isViewed === 1) {
           friend.viewedStories++;
         }
       }

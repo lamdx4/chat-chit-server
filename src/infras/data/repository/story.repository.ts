@@ -20,7 +20,7 @@ export interface FriendsStoryListRaw {
   story_content: string;
   story_text: string;
   story_createdAt: Date;
-  isViewedByCurrentUser: number; // 0 or 1 from CASE WHEN
+  story_isViewed: number; // 0 or 1 from CASE WHEN - moved to story level
 }
 
 export default class StoryRepository extends BaseRepository<Story> {
@@ -97,7 +97,7 @@ export default class StoryRepository extends BaseRepository<Story> {
       "story.content",
       "story.text",
       "story.createdAt",
-      "CASE WHEN view.viewerId IS NOT NULL THEN 1 ELSE 0 END as isViewedByCurrentUser"
+      "CASE WHEN view.viewerId IS NOT NULL THEN 1 ELSE 0 END as story_isViewed"
       ])
       .innerJoin("Story", "story", "story.ownerId = user.userId")
       .innerJoin("Relationship", "rel", 
