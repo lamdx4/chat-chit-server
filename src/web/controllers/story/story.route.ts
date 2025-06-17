@@ -74,4 +74,16 @@ storyRouter.get(
   asyncUtil(storyController.getStoryInteractions.bind(storyController))
 );
 
+storyRouter.post(
+  "/:storyId/archive",
+  authenticateMiddleware,
+  asyncUtil(storyController.archiveStory.bind(storyController))
+);
+
+storyRouter.get(
+  "/archived/:targetUserId",
+  authenticateMiddleware,
+  asyncUtil(storyController.getArchivedStoriesByUserId.bind(storyController))
+);
+
 export default storyRouter;

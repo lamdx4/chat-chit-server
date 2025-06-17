@@ -208,6 +208,53 @@ export default class StoryController {
     }
   }
 
+  /**
+   * Handle archive story request
+   */
+  async archiveStory(req: Request, res: Response, next: NextFunction) {
+    const userId = req.userId!;
+    const { storyId } = req.params;
+
+    // Validate storyId
+    if (!storyId || isNaN(Number(storyId))) {
+      return res.status(400).json(
+        ResponseData.fail("INVALID_STORY_ID", {
+          storyId: ["Story ID is required and must be a valid number."]
+        })
+      );
+    }
+
+    const result = await this.storyService.archiveStory(Number(storyId), userId);
+
+    if (result.isSuccess) {
+      return res.status(200).json(ResponseData.success(result.data, result.message));
+    } else {
+      return res.status(result.code ?? 500).json(ResponseData.fail(result.message, result.errors));
+    }
+  }
+
+
+  /**
+   * Get archived stories by user ID
+   */
+  async getArchivedStoriesByUserId(req: Request, res: Response, next: NextFunction) {
+    const userId = req.userId!;
+    const { targetUserId } = req.params;
+
+    // Use current user ID if targetUserId is not provided or invalid
+    let finalTargetUserId = userId;
+    if (targetUserId && !isNaN(Number(targetUserId))) {
+      finalTargetUserId = Number(targetUserId);
+    }
+
+    const result = await this.storyService.getArchivedStoriesByUserId(finalTargetUserId, userId);
+
+    if (result.isSuccess) {
+      return res.status(200).json(ResponseData.success(result.data, result.message));
+    } else {
+      return res.status(result.code ?? 500).json(ResponseData.fail(result.message, result.errors));
+    }
+  }
 
 
 

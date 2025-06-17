@@ -137,4 +137,57 @@ export class StoryReactionDto {
   }
 }
 
+export class StoryArchivedDto {
+  @Expose()
+  storyId: number;
 
+  @Expose()
+  type: string;
+
+  @Expose()
+  content: string;
+
+  @Expose()
+  text: string;
+
+  @Expose()
+  createdAt: Date;
+
+  @Expose()
+  isViewed: boolean;
+
+  @Expose()
+  isReacted: boolean;
+
+  @Expose()
+  viewCount: number;
+
+  @Expose()
+  reactCount: number;
+
+  constructor(partial: Partial<StoryArchivedDto>) {
+    Object.assign(this, partial);
+  }
+}
+
+export class UserStoryArchivedDto {
+  @Expose()
+  userId: number;
+
+  @Expose()
+  userName: string;
+
+  @Expose()
+  avatar: string;
+
+  @Expose()
+  @Type(() => StoryArchivedDto)
+  stories: StoryArchivedDto[];
+
+  constructor(partial: Partial<UserStoryArchivedDto>) {
+    Object.assign(this, partial);
+    if (partial.stories) {
+      this.stories = partial.stories.map(s => new StoryArchivedDto(s));
+    }
+  }
+}

@@ -1,11 +1,11 @@
-import StoryRepository, { StoryInteractionRaw } from "../../infras/data/repository/story.repository";
+import StoryRepository, { StoryInteractionRaw, UserStoryArchivedRaw } from "../../infras/data/repository/story.repository";
 import { Result } from "../../web/utils/result";
 import CreateStoryRequest from "../../web/controllers/story/reqs/create-story.request";
 import { CloudService } from "../../infras/aws-s3/aws-s3.service";
 import fs from "fs";
 import Stream from "stream";
-import { StoryFriendDto, UserStoryDto, StoryWithUserDto, StoryReactionDto } from "./dtos/story-list.dto";
-import { FriendStoryRaw, FriendsStoryListRaw, StoryWithUserRaw } from "../../infras/data/repository/story.repository";
+import { StoryFriendDto, UserStoryDto, StoryWithUserDto, StoryReactionDto, StoryDto, UserStoryArchivedDto, StoryArchivedDto } from "./dtos/story-list.dto";
+import { FriendStoryRaw, UserStoryListRaw, StoryWithUserRaw } from "../../infras/data/repository/story.repository";
 
 export default class StoryService {
   private storyRepository: StoryRepository;
@@ -97,22 +97,14 @@ export default class StoryService {
    */
   async getFriendsStoryList(currentUserId: number): Promise<Result<UserStoryDto[]>> {
     try {
-      const results = await this.storyRepository.getFriendsStoryList(currentUserId) as FriendsStoryListRaw[];
+      const results = await this.storyRepository.getFriendsStoryList(currentUserId) as UserStoryListRaw[];
       
       // Group results by user
       const friendMap = new Map<number, {
         userId: number;
         userName: string;
         avatar: string;
-        stories: {
-          storyId: number;
-          type: "image" | "video";
-          content: string;
-          text: string;
-          createdAt: Date;
-          isViewed: boolean;
-          isReacted: boolean;
-        }[];
+        stories: StoryDto[];
         totalStories: number;
         viewedStories: number;
       }>();
@@ -132,7 +124,7 @@ export default class StoryService {
         }
         
         const friend = friendMap.get(userId)!;
-        friend.stories.push({
+        friend.stories.push(new StoryDto({
           storyId: row.story_storyId,
           type: row.story_type,
           content: row.story_content,
@@ -140,7 +132,7 @@ export default class StoryService {
           createdAt: row.story_createdAt,
           isViewed: row.story_isViewed === 1,
           isReacted: row.story_isReacted === 1
-        });
+        }));
         
         friend.totalStories++;
         if (row.story_isViewed === 1) {
@@ -205,7 +197,7 @@ export default class StoryService {
    */
   async getStoriesByUserId(userId: number, currentUserId: number): Promise<Result<UserStoryDto>> {
     try {
-      const results = await this.storyRepository.getStoriesByUserId(userId, currentUserId) as FriendsStoryListRaw[];
+      const results = await this.storyRepository.getStoriesByUserId(userId, currentUserId) as UserStoryListRaw[];
       
       if (results.length === 0) {
         return Result.fail(404, "User not found or has no stories");
@@ -213,21 +205,13 @@ export default class StoryService {
 
       // Process the first row to get user info
       const firstRow = results[0];
-      const stories: {
-        storyId: number;
-        type: "image" | "video";
-        content: string;
-        text: string;
-        createdAt: Date;
-        isViewed: boolean;
-        isReacted: boolean;
-      }[] = [];
+      const stories: StoryDto[] = [];
       
       let totalStories = 0;
       let viewedStories = 0;
       
       for (const row of results) {
-        stories.push({
+        stories.push(new StoryDto({
           storyId: row.story_storyId,
           type: row.story_type,
           content: row.story_content,
@@ -235,7 +219,7 @@ export default class StoryService {
           createdAt: row.story_createdAt,
           isViewed: row.story_isViewed === 1,
           isReacted: row.story_isReacted === 1
-        });
+        }));
         
         totalStories++;
         if (row.story_isViewed === 1) {
@@ -343,6 +327,83 @@ export default class StoryService {
       return Result.fail(500, "Failed to get story interactions due to server error");
     }
   }
+
+  /**
+   * Archive a story by its ID.
+   * @param storyId - The ID of the story to archive
+   * @param userId - The ID of the user who owns the story
+   * @returns - Result.ok(true) if successful, Result.fail if error
+   */
+  async archiveStory(storyId: number, userId: number): Promise<Result<boolean>> {
+    try {
+      // Check if the story is already archived
+      const isAlreadyArchived = await this.storyRepository.isStoryArchived(storyId);
+      
+      if (isAlreadyArchived) {
+        return Result.ok(true); // Already archived, no need to archive again
+      }
+
+      // Archive the story
+      const isArchived = await this.storyRepository.archiveStory(storyId, userId);
+      
+      if (!isArchived) {
+        return Result.fail(404, "Story not found or you don't have permission to archive it");
+      }
+      
+      return Result.ok(true);
+    } catch (error) {
+      console.error("StoryService Error:", error);
+      return Result.fail(500, "Failed to archive story due to server error");
+    }
+  }
+
+
+  /**
+   * Get archived stories by specific user ID
+   * @param userId - The ID of the user whose archived stories to retrieve
+   * @param currentUserId - The ID of the current user viewing the stories
+   * @returns - Result with list of archived stories from the specified user
+   */
+  async getArchivedStoriesByUserId(userId: number, currentUserId: number): Promise<Result<UserStoryArchivedDto>> {
+    try {
+      const results = await this.storyRepository.getArchivedStoriesByUserId(userId, currentUserId) as UserStoryArchivedRaw[];
+      
+      if (results.length === 0) {
+        return Result.fail(404, "User not found or has no archived stories");
+      }
+
+      // Process the first row to get user info
+      const firstRow = results[0];
+      const stories: StoryArchivedDto[] = [];
+      
+      for (const row of results) {
+        stories.push(new StoryArchivedDto({
+          storyId: row.story_storyId,
+          type: row.story_type,
+          content: row.story_content,
+          text: row.story_text,
+          createdAt: row.story_createdAt,
+          isViewed: row.story_isViewed === 1,
+          isReacted: row.story_isReacted === 1,
+          viewCount: row.story_viewCount || 0,
+          reactCount: row.story_reactCount || 0
+        }));
+      }
+
+      const userStoryArchived = new UserStoryArchivedDto({
+        userId: firstRow.user_userId,
+        userName: firstRow.user_userName,
+        avatar: firstRow.user_avatar,
+        stories: stories.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      });
+
+      return Result.ok(userStoryArchived);
+    } catch (error) {
+      console.error("StoryService Error:", error);
+      return Result.fail(500, "Failed to get archived user stories due to server error");
+    }
+  }
+  
 
 
 }
