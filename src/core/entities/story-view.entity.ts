@@ -25,7 +25,7 @@ export class StoryView {
   @JoinColumn({ name: "viewerId" })
   viewer?: User;
 
-  @ManyToOne(() => Story, (story) => story.storyViews)
+  @ManyToOne(() => Story, (story) => story.storyViews, { onDelete: "CASCADE" })
   @JoinColumn({ name: "storyId" })
   story?: Story;
 }

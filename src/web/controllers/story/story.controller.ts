@@ -11,6 +11,21 @@ export default class StoryController {
   }
 
   /**
+   * Validate storyId parameter
+   */
+  private validateStoryId(storyId: string, res: Response): number | null {
+    if (!storyId || isNaN(Number(storyId))) {
+      res.status(400).json(
+        ResponseData.fail("INVALID_STORY_ID", {
+          storyId: ["Story ID is required and must be a valid number."]
+        })
+      );
+      return null;
+    }
+    return Number(storyId);
+  }
+
+  /**
    * Handle create story request
    */
   async createStory(req: Request, res: Response, next: NextFunction) {
@@ -102,16 +117,10 @@ export default class StoryController {
     const userId = req.userId!;
     const { storyId } = req.params;
 
-    // Validate storyId
-    if (!storyId || isNaN(Number(storyId))) {
-      return res.status(400).json(
-        ResponseData.fail("INVALID_STORY_ID", {
-          storyId: ["Story ID is required and must be a valid number."]
-        })
-      );
-    }
+    const validatedStoryId = this.validateStoryId(storyId, res);
+    if (validatedStoryId === null) return;
 
-    const result = await this.storyService.insertStoryView(Number(storyId), userId);
+    const result = await this.storyService.insertStoryView(validatedStoryId, userId);
 
     if (result.isSuccess) {
       return res.status(200).json(ResponseData.success(result.data, result.message));
@@ -165,16 +174,10 @@ export default class StoryController {
     const userId = req.userId!;
     const { storyId } = req.params;
 
-    // Validate storyId
-    if (!storyId || isNaN(Number(storyId))) {
-      return res.status(400).json(
-        ResponseData.fail("INVALID_STORY_ID", {
-          storyId: ["Story ID is required and must be a valid number."]
-        })
-      );
-    }
+    const validatedStoryId = this.validateStoryId(storyId, res);
+    if (validatedStoryId === null) return;
 
-    const result = await this.storyService.insertStoryReact(Number(storyId), userId);
+    const result = await this.storyService.insertStoryReact(validatedStoryId, userId);
 
     if (result.isSuccess) {
       return res.status(200).json(ResponseData.success(result.data, result.message));
@@ -190,16 +193,10 @@ export default class StoryController {
     const userId = req.userId!;
     const { storyId } = req.params;
 
-    // Validate storyId
-    if (!storyId || isNaN(Number(storyId))) {
-      return res.status(400).json(
-        ResponseData.fail("INVALID_STORY_ID", {
-          storyId: ["Story ID is required and must be a valid number."]
-        })
-      );
-    }
+    const validatedStoryId = this.validateStoryId(storyId, res);
+    if (validatedStoryId === null) return;
 
-    const result = await this.storyService.getStoryInteractions(Number(storyId), userId);
+    const result = await this.storyService.getStoryInteractions(validatedStoryId, userId);
 
     if (result.isSuccess) {
       return res.status(200).json(ResponseData.success(result.data, result.message));
@@ -215,16 +212,10 @@ export default class StoryController {
     const userId = req.userId!;
     const { storyId } = req.params;
 
-    // Validate storyId
-    if (!storyId || isNaN(Number(storyId))) {
-      return res.status(400).json(
-        ResponseData.fail("INVALID_STORY_ID", {
-          storyId: ["Story ID is required and must be a valid number."]
-        })
-      );
-    }
+    const validatedStoryId = this.validateStoryId(storyId, res);
+    if (validatedStoryId === null) return;
 
-    const result = await this.storyService.archiveStory(Number(storyId), userId);
+    const result = await this.storyService.archiveStory(validatedStoryId, userId);
 
     if (result.isSuccess) {
       return res.status(200).json(ResponseData.success(result.data, result.message));
@@ -257,5 +248,23 @@ export default class StoryController {
   }
 
 
+  /**
+   * Handle delete story request
+   */
+  async deleteStory(req: Request, res: Response, next: NextFunction) {
+    const userId = req.userId!;
+    const { storyId } = req.params;
+
+    const validatedStoryId = this.validateStoryId(storyId, res);
+    if (validatedStoryId === null) return;
+
+    const result = await this.storyService.deleteStory(validatedStoryId, userId);
+
+    if (result.isSuccess) {
+      return res.status(200).json(ResponseData.success(result.data, result.message));
+    } else {
+      return res.status(result.code ?? 500).json(ResponseData.fail(result.message, result.errors));
+    }
+  }
 
 }

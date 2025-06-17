@@ -17,7 +17,7 @@ export class ReactStory {
   @PrimaryColumn()
   reacterId: number;
 
-  @ManyToOne(() => Story, (story) => story.reactions)
+  @ManyToOne(() => Story, (story) => story.reactions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "storyId" })
   story?: Story;
 

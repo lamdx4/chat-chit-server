@@ -86,4 +86,10 @@ storyRouter.get(
   asyncUtil(storyController.getArchivedStoriesByUserId.bind(storyController))
 );
 
+storyRouter.delete(
+  "/:storyId",
+  authenticateMiddleware,
+  asyncUtil(storyController.deleteStory.bind(storyController))
+);
+
 export default storyRouter;

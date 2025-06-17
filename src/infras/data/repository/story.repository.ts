@@ -366,4 +366,20 @@ export default class StoryRepository extends BaseRepository<Story> {
       return !!story;
     }
 
+    /**
+     * Find a story by its ID
+     */
+    async findStoryById(storyId: number): Promise<Story | null> {
+      return this.findOne({ where: { storyId } });
+    }
+
+    /**
+     * Delete a story by its ID
+     */
+    async deleteStory(storyId: number): Promise<boolean> {
+      const result = await this.delete({ storyId });
+      
+      return result.affected! > 0;
+    }
+
 }

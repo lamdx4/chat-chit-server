@@ -403,6 +403,52 @@ export default class StoryService {
       return Result.fail(500, "Failed to get archived user stories due to server error");
     }
   }
+
+  /**
+   * Delete a story by its ID, including removing the file from cloud storage
+   * @param storyId - The ID of the story to delete
+   * @param userId - The ID of the user who owns the story
+   * @returns - Result.ok(true) if successful, Result.fail if error
+   */
+  async deleteStory(storyId: number, userId: number): Promise<Result<boolean>> {
+    try {
+      // First find the story to get its content URL
+      const story = await this.storyRepository.findStoryById(storyId);
+      
+      if (!story) {
+        return Result.fail(404, "Story not found");
+      }
+
+      // Check if the user owns the story
+      if (story.ownerId !== userId) {
+        return Result.fail(403, "You don't have permission to delete this story");
+      }
+
+      // Delete the story from database
+      const isDeleted = await this.storyRepository.deleteStory(storyId);
+      
+      if (!isDeleted) {
+        return Result.fail(500, "Failed to delete story from database");
+      }
+
+      // If story has content URL (file), delete it from cloud storage
+      if (story.content && (story.content.includes('public/story/') || story.content.includes('public%2Fstory%2F'))) {
+        try {
+          // Extract S3 key from the URL - decode URI component to handle %2F encoding
+          const url = new URL(story.content);
+          const s3Key = decodeURIComponent(url.pathname.substring(1)); // Remove leading '/' and decode
+          await CloudService.getInstance().deleteFile(s3Key);
+        } catch (cloudError) {
+          console.error("Failed to delete file from cloud storage:", cloudError);
+        }
+      }
+
+      return Result.ok(true);
+    } catch (error) {
+      console.error("StoryService Error:", error);
+      return Result.fail(500, "Failed to delete story due to server error");
+    }
+  }
   
 
 
