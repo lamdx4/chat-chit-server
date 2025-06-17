@@ -80,7 +80,7 @@ export default class StoryService {
             userName: row.user_userName,
             avatar: row.user_avatar,
             lastStoryTime: row.lastStoryTime ? new Date(row.lastStoryTime) : new Date(0),
-            isViewed: parseInt(row.totalStories) > 0 && parseInt(row.totalStories) === parseInt(row.viewedStories)
+            isViewed: parseInt(row.totalStories) > 0 && parseInt(row.totalStories) == parseInt(row.viewedStories)
           })
         );
         return Result.ok(stories);
@@ -130,12 +130,12 @@ export default class StoryService {
           content: row.story_content,
           text: row.story_text,
           createdAt: row.story_createdAt,
-          isViewed: row.story_isViewed === 1,
-          isReacted: row.story_isReacted === 1
+          isViewed: row.story_isViewed == 1,
+          isReacted: row.story_isReacted == 1
         }));
         
         friend.totalStories++;
-        if (row.story_isViewed === 1) {
+        if (row.story_isViewed == 1) {
           friend.viewedStories++;
         }
       }
@@ -146,7 +146,7 @@ export default class StoryService {
           userId: friend.userId,
           userName: friend.userName,
           avatar: friend.avatar,
-          isViewed: friend.totalStories > 0 && friend.viewedStories === friend.totalStories,
+          isViewed: friend.totalStories > 0 && friend.viewedStories == friend.totalStories,
           stories: friend.stories
           
         }))
@@ -199,7 +199,7 @@ export default class StoryService {
     try {
       const results = await this.storyRepository.getStoriesByUserId(userId, currentUserId) as UserStoryListRaw[];
       
-      if (results.length === 0) {
+      if (results.length == 0) {
         return Result.fail(404, "User not found or has no stories");
       }
 
@@ -217,12 +217,12 @@ export default class StoryService {
           content: row.story_content,
           text: row.story_text,
           createdAt: row.story_createdAt,
-          isViewed: row.story_isViewed === 1,
-          isReacted: row.story_isReacted === 1
+          isViewed: row.story_isViewed == 1,
+          isReacted: row.story_isReacted == 1
         }));
         
         totalStories++;
-        if (row.story_isViewed === 1) {
+        if (row.story_isViewed == 1) {
           viewedStories++;
         }
       }
@@ -231,7 +231,7 @@ export default class StoryService {
         userId: firstRow.user_userId,
         userName: firstRow.user_userName,
         avatar: firstRow.user_avatar,
-        isViewed: totalStories > 0 && viewedStories === totalStories,
+        isViewed: totalStories > 0 && viewedStories == totalStories,
         stories: stories.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       };
 
@@ -258,14 +258,14 @@ export default class StoryService {
           content: row.story_content,
           text: row.story_text,
           createdAt: row.story_createdAt,
-          isViewed: row.story_isViewed === 1,
+          isViewed: row.story_isViewed == 1,
           visibility: row.story_visibility,
-          isReacted: row.story_isReacted === 1,
+          isReacted: row.story_isReacted == 1,
           user: {
             userId: row.user_userId,
             userName: row.user_userName,
             avatar: row.user_avatar,
-            isFriend: row.user_isFriend === 1
+            isFriend: row.user_isFriend == 1
           }
         })
       );
@@ -368,7 +368,7 @@ export default class StoryService {
     try {
       const results = await this.storyRepository.getArchivedStoriesByUserId(userId, currentUserId) as UserStoryArchivedRaw[];
       
-      if (results.length === 0) {
+      if (results.length == 0) {
         return Result.fail(404, "User not found or has no archived stories");
       }
 
@@ -383,8 +383,8 @@ export default class StoryService {
           content: row.story_content,
           text: row.story_text,
           createdAt: row.story_createdAt,
-          isViewed: row.story_isViewed === 1,
-          isReacted: row.story_isReacted === 1,
+          isViewed: row.story_isViewed == 1,
+          isReacted: row.story_isReacted == 1,
           viewCount: row.story_viewCount || 0,
           reactCount: row.story_reactCount || 0
         }));
