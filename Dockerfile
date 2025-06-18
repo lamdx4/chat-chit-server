@@ -5,20 +5,20 @@ FROM node:22-alpine AS base
 WORKDIR /app
 
 # Copy package files for dependency installation
-COPY package.json package-lock.json* yarn.lock* ./
+COPY package.json yarn.lock* ./
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN yarn install --production --frozen-lockfile && yarn cache clean
 
 # Development stage
 FROM node:22-alpine AS development
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* yarn.lock* ./
+COPY package.json yarn.lock* ./
 
 # Install all dependencies (including dev dependencies)
-RUN npm ci
+RUN yarn install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -27,23 +27,23 @@ COPY . .
 EXPOSE 36363
 
 # Start development server
-CMD ["npm", "run", "dev"]
+CMD ["yarn", "dev"]
 
 # Build stage
 FROM node:22-alpine AS build
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* yarn.lock* ./
+COPY package.json yarn.lock* ./
 
 # Install all dependencies (including dev dependencies for building)
-RUN npm ci
+RUN yarn install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN yarn build
 
 # Production stage
 FROM node:22-alpine AS production
@@ -56,10 +56,10 @@ RUN adduser -S nodejs -u 1001
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* yarn.lock* ./
+COPY package.json yarn.lock* ./
 
 # Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN yarn install --production --frozen-lockfile && yarn cache clean
 
 # Copy built application from build stage
 COPY --from=build /app/dist ./dist
@@ -81,4 +81,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "const http = require('http'); const options = { host: 'localhost', port: 36363, path: '/api/health', timeout: 2000 }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();" || exit 1
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["yarn", "start"]
