@@ -43,3 +43,4 @@ uploads/*
 
 .env
 !env.example
+.env.prod

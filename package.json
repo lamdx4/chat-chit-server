@@ -7,7 +7,14 @@
     "start": "node dist/index.js",
     "dev": "nodemon --watch . --exec ts-node index.ts",
     "build": "tsc",
-    "seed": "npx ts-node src/infras/data/seed-data/seed-data.ts"
+    "seed": "npx ts-node src/infras/data/seed-data/seed-data.ts",
+    "docker:build": "docker build -t chat-server .",
+    "docker:run": "docker-compose up",
+    "docker:run-dev": "docker-compose -f docker-compose.dev.yml up",
+    "docker:down": "docker-compose down",
+    "docker:down-dev": "docker-compose -f docker-compose.dev.yml down",
+    "docker:build-prod": "docker build --target production -t chat-server:prod .",
+    "docker:logs": "docker-compose logs -f chat-server"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.803.0",
