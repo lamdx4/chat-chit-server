@@ -12,10 +12,8 @@ import {
 import { GroupChat } from "./group-chat.entity";
 import { User } from "./user.entity";
 import { Message } from "./message.entity";
-import { ManipulateMember } from "./manipulate-member.entity";
 import { Reaction } from "./reaction.entity";
 import { GroupRole } from "./group-role.entity";
-
 
 export enum MemberStatusType {
   Invited = "Invited",
@@ -63,7 +61,7 @@ export class Member {
   @Column({ name: "roleId" })
   roleId: number;
 
-  @ManyToOne(() => GroupRole, { cascade: true, onDelete: "CASCADE" })
+  @ManyToOne(() => GroupRole, { cascade: true, eager: true })
   @JoinColumn({ name: "roleId" })
   role: GroupRole;
 
@@ -85,6 +83,7 @@ export class Member {
   @Column({
     name: "nickName",
     length: 36,
+    nullable: true,
   })
   nickName: string;
 
@@ -93,7 +92,9 @@ export class Member {
   @JoinColumn({ name: "groupId" })
   group: GroupChat;
 
-  @ManyToOne(() => User, (user) => user.members)
+  @ManyToOne(() => User, (user) => user.members, {
+    eager: true,
+  })
   @JoinColumn({ name: "userId" })
   user: User;
 
@@ -104,12 +105,6 @@ export class Member {
   @ManyToOne(() => Message)
   @JoinColumn({ name: "lastReceivedMessageId" })
   lastReceivedMessage?: Message;
-
-  @OneToMany(
-    () => ManipulateMember,
-    (manipulateMember) => manipulateMember.member
-  )
-  manipulateMembers: ManipulateMember[];
 
   @OneToMany(() => Message, (message) => message.ownerMember)
   messages: Message[];

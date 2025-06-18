@@ -48,7 +48,10 @@ export class GroupChat {
   })
   groupChatStatus: GroupChatStatusType;
 
-  @Column({ length: 30, nullable: true })
+  @Column({ type: "varchar", length: 100, nullable: true, default: "👍" })
+  emoji: string;
+
+  @Column({ length: 150, nullable: true })
   avatar?: string;
 
   @Column({ type: "enum", enum: GroupChatType })
@@ -61,13 +64,13 @@ export class GroupChat {
   @Index({ unique: true })
   link: string;
 
-  @OneToMany(() => Member, (member) => member.group, { cascade: true })
+  @OneToMany(() => Member, (member) => member.group, { cascade: true, eager: true })
   members: Member[];
 
-  @OneToOne(() => File, (file) => file.groupAvatar)
+  @OneToOne(() => File, (file) => file.groupAvatar, { cascade: true, eager: true })
   @JoinColumn({ name: "avatar" })
   avatarGroup: File;
 
-  @OneToMany(() => GroupRole, (role) => role.group, { cascade: true })
+  @OneToMany(() => GroupRole, (role) => role.group, { cascade: true , eager: true })
   roles: GroupRole[];
 }

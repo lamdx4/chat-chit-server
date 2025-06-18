@@ -37,10 +37,24 @@ export class CloudService {
     return CloudService.instance;
   }
 
+  async batchGetSignedUrls(keys: string[]): Promise<Map<string, string>> {
+    const uniqueKeys = [...new Set(keys)];
+
+    const urlMap = new Map<string, string>();
+    for (const key of uniqueKeys) {
+      if (!key) continue; // Skip empty keys
+      urlMap.set(
+        key,
+        await this.getFilePreSignerUrl(key, 3600) // 1 hour expiration
+      );
+    }
+    return urlMap;
+  }
+
   async uploadFile(
     key: string,
     body: Buffer | Uint8Array | Blob | string,
-    contentType: string,
+    contentType: string
   ): Promise<PutObjectCommandOutput> {
     const params: PutObjectCommandInput = {
       Bucket: CloudService.BUCKET_NAME,
@@ -54,7 +68,7 @@ export class CloudService {
   async uploadStreamFile(
     key: string,
     body: Readable, // stream
-    contentType: string,
+    contentType: string
   ): Promise<void> {
     const upload = new Upload({
       client: this.s3,

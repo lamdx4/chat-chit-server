@@ -16,9 +16,12 @@ import {
   MemberRole,
 } from "../../../core/entities/group-role.entity";
 import { Permission } from "../../../core/entities/permission.entity";
-import { Message, MessageType } from "../../../core/entities/message.entity";
-import { GroupListItemDto } from "../../../application/group/dtos/group-list.dto";
-import { ManipulateMember } from "../../../core/entities/manipulate-member.entity";
+import {
+  Message,
+  MessageStatus,
+  MessageType,
+} from "../../../core/entities/message.entity";
+import { File } from "../../../core/entities/file.entity";
 
 export default class GroupRepository extends BaseRepository<GroupChat> {
   private userRepository: UserRepository;
@@ -27,92 +30,321 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
     this.userRepository = new UserRepository();
   }
 
+  async addMemberToGroup(groupId: number, friendIds: number[]) {
+    const members: Member[] = [];
+    const roles = await this.manager.getRepository(GroupRole).find({
+      where: { groupId },
+    });
+    for (const _userId of friendIds) {
+      members.push(
+        this.manager.getRepository(Member).create({
+          groupId: groupId,
+          userId: _userId,
+          roleId: roles.find((role) => role.name === MemberRole.Member)?.roleId, // Gán role Owner cho người tạo
+          //FIXME: status mặc định là Active, sau này có thể thay đổi theo logic
+          // status:
+          //   userWithPrivacy.find((u) => u.userId === _userId)?.userPrivacy
+          //     .groupJoinMode === UserGroupJoinMode.AutoJoinForFriends
+          //     ? MemberStatusType.Active
+          //     : MemberStatusType.Invited,
+        })
+      );
+    }
+    await this.manager.getRepository(Member).save(members);
+    return true;
+  }
+
+  async changeEmojiGroup(groupId: number, emoji: string) {
+    const group = await this.manager.getRepository(GroupChat).findOne({
+      where: { groupId },
+    });
+
+    if (!group) {
+      throw new Error("Group not found");
+    }
+
+    group.emoji = emoji;
+    await this.manager.getRepository(GroupChat).save(group);
+    return true;
+  }
+
+  async viewNewMessage(latestMessageId: number, memberId: number) {
+    // Lấy thông tin thành viên trong nhóm
+    const member = await this.manager.getRepository(Member).findOne({
+      where: { memberId },
+    });
+
+    // Cập nhật lastReadMessageId cho thành viên
+    member!.lastReadMessageId = latestMessageId; // Hoặc có thể để là ID của message mới nhất nếu cần
+    await this.manager.getRepository(Member).save(member!);
+
+    return true;
+  }
+
+  async getMemberInfo(groupId: number, memberId: number, userId: number) {
+    return this.manager.getRepository(Member).findOne({
+      where: { groupId, memberId, userId },
+      relations: ["user"],
+    });
+  }
+
+  async changeGroupAvatar(
+    groupId: number,
+    key: string,
+    mimeType: string
+  ): Promise<boolean> {
+    return this.manager.transaction(
+      async (transactionalEntityManager: EntityManager) => {
+        // Tìm kiếm nhóm theo groupId
+        const group = await transactionalEntityManager
+          .getRepository(GroupChat)
+          .findOne({
+            where: { groupId },
+          });
+
+        if (!group) {
+          throw new Error("Group not found");
+        }
+
+        await transactionalEntityManager.getRepository(File).save({
+          fileId: key,
+          mimeType: mimeType, // Hoặc loại MIME phù hợp với ảnh
+        });
+
+        // Cập nhật avatar của nhóm
+        group.avatar = key;
+        await transactionalEntityManager.getRepository(GroupChat).save(group);
+
+        return true;
+      }
+    );
+  }
+
+  async renameGroup(groupId: number, name: string): Promise<boolean> {
+    try {
+      const group = await this.manager.getRepository(GroupChat).findOne({
+        where: { groupId },
+      });
+      if (!group) {
+        throw new Error("Group not found");
+      }
+      group.name = name;
+      await this.manager.getRepository(GroupChat).save(group);
+      return true;
+    } catch (error) {
+      console.error("Error renaming group:", error);
+      return false;
+    }
+  }
+
+  async getSearchMemberFromGroup(
+    groupId: number,
+    searchTerm: string,
+    limit: number
+  ) {
+    const members = await this.manager
+      .createQueryBuilder(Member, "member")
+      .leftJoinAndSelect("member.user", "user")
+      .where("member.groupId = :groupId", { groupId })
+      .andWhere("member.status = :status", { status: MemberStatusType.Active })
+      .andWhere(
+        "(member.nickName LIKE :searchTerm OR user.fullName LIKE :searchTerm)",
+        { searchTerm: `%${searchTerm}%` }
+      )
+      .orderBy("user.fullName", "ASC")
+      .take(limit)
+      .getMany();
+    return members;
+  }
+  /**
+   * Find a direct message group between two users
+   * @param userId1 - The ID of the first user
+   * @param userId2 - The ID of the second user
+   * @returns Promise<GroupChat | null> - The direct message group if exists, null otherwise
+   */
+  async findDirectMessageGroup(
+    userId1: number,
+    userId2: number
+  ): Promise<GroupChat | null> {
+    // Find groups where:
+    // 1. Group type is Direct
+    // 2. Has exactly 2 active members
+    // 3. Those 2 members are userId1 and userId2
+    const directGroup = await this.manager
+      .createQueryBuilder(GroupChat, "group")
+      .innerJoin("group.members", "member")
+      .where("group.groupType = :groupType", {
+        groupType: GroupChatType.Direct,
+      })
+      .andWhere("member.status = :status", { status: MemberStatusType.Active })
+      .andWhere("member.userId IN (:...userIds)", {
+        userIds: [userId1, userId2],
+      })
+      .groupBy("group.groupId")
+      .having("COUNT(DISTINCT member.userId) = 2")
+      .having("COUNT(member.memberId) = 2") // Ensure exactly 2 members total
+      .getOne();
+
+    // Double check that the group contains exactly the two users we want
+    if (directGroup) {
+      const members = await this.manager
+        .createQueryBuilder(Member, "member")
+        .where("member.groupId = :groupId", { groupId: directGroup.groupId })
+        .andWhere("member.status = :status", {
+          status: MemberStatusType.Active,
+        })
+        .getMany();
+
+      const memberUserIds = members.map((m) => m.userId).sort();
+      const targetUserIds = [userId1, userId2].sort();
+
+      // Verify that the members are exactly the two users we're looking for
+      if (
+        memberUserIds.length === 2 &&
+        memberUserIds[0] === targetUserIds[0] &&
+        memberUserIds[1] === targetUserIds[1]
+      ) {
+        return directGroup;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Create a direct message group between two users
+   * @param userId1 - The ID of the first user
+   * @param userId2 - The ID of the second user
+   * @returns Promise<GroupChat> - The created direct message group
+   */
+  async createDirectMessageGroup(
+    userId1: number,
+    userId2: number
+  ): Promise<GroupChat> {
+    return this.manager.transaction(async (transactionalEntityManager) => {
+      // 1. Create the direct message group
+      let group = this.create({
+        name: "Direct Message", // Default name for direct messages
+        createAt: new Date(),
+        groupType: GroupChatType.Direct,
+        groupPrivacyType: GroupPrivacyType.Private,
+        link: v4(),
+      });
+
+      group = await transactionalEntityManager.save(group);
+
+      // 2. Create default roles for direct message
+      const memberRole = transactionalEntityManager
+        .getRepository(GroupRole)
+        .create({
+          name: MemberRole.Member,
+          groupId: group.groupId,
+          permissions: [], // Direct messages don't need complex permissions
+        });
+
+      await transactionalEntityManager
+        .getRepository(GroupRole)
+        .save(memberRole);
+
+      // 3. Add both users as members
+      const members = [
+        transactionalEntityManager.getRepository(Member).create({
+          groupId: group.groupId,
+          userId: userId1,
+          nickName: v6(),
+          roleId: memberRole.roleId,
+          status: MemberStatusType.Active,
+        }),
+        transactionalEntityManager.getRepository(Member).create({
+          groupId: group.groupId,
+          userId: userId2,
+          nickName: v6(),
+          roleId: memberRole.roleId,
+          status: MemberStatusType.Active,
+        }),
+      ];
+
+      await transactionalEntityManager.getRepository(Member).save(members);
+
+      // 4. Return the created group
+      return transactionalEntityManager.getRepository(GroupChat).findOne({
+        where: { groupId: group.groupId },
+      }) as Promise<GroupChat>;
+    });
+  }
+
   async getMyListGroupByUserId(
     userId: number,
     cursor?: number,
     limit: number = 10
   ): Promise<GroupChat[]> {
-    // Build query to get groups with latest message ID for sorting
-    let queryBuilder = this.manager
-      .createQueryBuilder(GroupChat, "group")
-      .leftJoin("group.members", "member")
-      .leftJoin("member.user", "user")
-      .leftJoin(
-        Message,
-        "latestMessage",
-        "latestMessage.memberId IN (SELECT m.memberId FROM Member m WHERE m.groupId = group.groupId) OR latestMessage.messageId IN (SELECT mm.messageId FROM ManipulateMember mm JOIN Member mem ON mm.memberId = mem.memberId WHERE mem.groupId = group.groupId)"
-      )
-      .select([
-        "group.groupId",
-        "group.name",
-        "group.createAt",
-        "group.groupChatStatus",
-        "group.avatar",
-        "group.groupType",
-        "group.groupPrivacyType",
-        "group.link",
-        "MAX(latestMessage.messageId) as latestMessageId",
-      ])
-      .where("member.userId = :userId", { userId })
-      .andWhere("member.status = :status", { status: MemberStatusType.Active })
-      .groupBy(
-        "group.groupId, group.name, group.createAt, group.groupChatStatus, group.avatar, group.groupType, group.groupPrivacyType, group.link"
-      );
+    const queryBuilder = this.createQueryBuilder("group")
+      .innerJoin("group.members", "member")
+      .addSelect((qb) => {
+        return qb
+          .select("COALESCE(MAX(m.messageId), 0)")
+          .from(Message, "m")
+          .innerJoin("m.ownerMember", "mem")
+          .where("mem.groupId = group.groupId")
+          .andWhere("m.status = :messageStatus");
+      }, "latestMessageId")
+      .where("member.userId = :userId")
+      .andWhere("member.status = :status")
+      .setParameters({
+        userId,
+        status: MemberStatusType.Active,
+        messageStatus: MessageStatus.Normal,
+      });
 
-    // Apply cursor-based pagination if cursor is provided
     if (cursor) {
-      queryBuilder = queryBuilder.having(
-        "MAX(latestMessage.messageId) < :cursor",
-        { cursor }
-      );
+      queryBuilder.andHaving("latestMessageId < :cursor", { cursor });
     }
 
-    // Order by latest message ID descending and apply limit
-    const results = await queryBuilder
-      .orderBy("MAX(latestMessage.messageId)", "DESC")
-      .limit(limit + 1) // Fetch one extra for cursor pagination
+    return await queryBuilder
+      .orderBy("latestMessageId", "DESC")
+      .limit(limit + 1)
       .getMany();
-
-    if (results.length === 0) {
-      return [];
-    }
-
-    return results;
   }
 
-  async getLatestMessage(groupId: number): Promise<Message | null> {
-    // First get the latest message
-    const message = await this.manager
-      .createQueryBuilder(Message, "message")
-      .leftJoinAndSelect("message.ownerMember", "messageMember")
-      .leftJoinAndSelect("messageMember.user", "messageUser")
-      .where(
-        "message.memberId IN (SELECT m.memberId FROM Member m WHERE m.groupId = :groupId) OR message.messageId IN (SELECT mm.messageId FROM ManipulateMember mm JOIN Member mem ON mm.memberId = mem.memberId WHERE mem.groupId = :groupId)",
-        { groupId }
-      )
-      .orderBy("message.messageId", "DESC")
-      .limit(1)
-      .getOne();
+  async getGroupById(groupId: number): Promise<GroupChat | null> {
+    const data = await this.manager.getRepository(GroupChat).findOne({
+      where: { groupId },
+      order: {
+        members: {
+          timeJoin: "ASC",
+        },
+      },
+    });
+    return data ? data : null;
+  }
 
-    // If message exists, load its manipulateMembers separately
-    if (message) {
-      const messageWithManipulates = await this.manager
-        .createQueryBuilder(Message, "message")
-        .leftJoinAndSelect("message.manipulateMembers", "manipulateMembers")
-        .leftJoinAndSelect("manipulateMembers.member", "manipulateMember")
-        .leftJoinAndSelect("manipulateMember.user", "manipulateUser")
-        .where("message.messageId = :messageId", {
-          messageId: message.messageId,
-        })
-        .getOne();
+  async searchMembersInGroup(
+    groupId: number,
+    searchTerm: string,
+    limit: number = 10
+  ): Promise<Member[]> {
+    return await this.manager.getRepository(Member).find({
+      where: {
+        groupId,
+        user: {
+          fullName: In([`%${searchTerm}%`]),
+        },
+      },
+      relations: ["user"],
+      take: limit,
+      order: {
+        user: {
+          fullName: "ASC",
+        },
+      },
+    });
+  }
 
-      if (messageWithManipulates) {
-        // Merge the manipulateMembers into the original message
-        message.manipulateMembers = messageWithManipulates.manipulateMembers;
-      }
-    }
-
-    return message;
+  async getListMembersOfGroup(groupId: number): Promise<Member[]> {
+    return await this.manager.getRepository(Member).find({
+      where: { groupId, status: MemberStatusType.Active },
+      relations: ["user"],
+    });
   }
 
   async getUnreadMessageCount(
@@ -133,11 +365,10 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
       return await this.manager
         .createQueryBuilder(Message, "message")
         .leftJoin("message.ownerMember", "messageMember")
-        .leftJoin("message.manipulateMembers", "manipulateMembers")
-        .leftJoin("manipulateMembers.member", "manipulateMember")
+        .leftJoin("message.manipulateMembers", "member")
         .where("messageMember.groupId = :groupId", { groupId })
         .andWhere(
-          "(messageMember.userId = :userId OR manipulateMember.userId = :userId)",
+          "(messageMember.userId = :userId OR member.userId = :userId)",
           { userId }
         )
         .getCount();
@@ -147,13 +378,11 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
     return await this.manager
       .createQueryBuilder(Message, "message")
       .leftJoin("message.ownerMember", "messageMember")
-      .leftJoin("message.manipulateMembers", "manipulateMembers")
-      .leftJoin("manipulateMembers.member", "manipulateMember")
+      .leftJoin("message.manipulateMembers", "member")
       .where("messageMember.groupId = :groupId", { groupId })
-      .andWhere(
-        "(messageMember.userId = :userId OR manipulateMember.userId = :userId)",
-        { userId }
-      )
+      .andWhere("(messageMember.userId = :userId OR member.userId = :userId)", {
+        userId,
+      })
       .andWhere("message.messageId > :lastReadMessageId", {
         lastReadMessageId: member.lastReadMessageId,
       })
@@ -202,25 +431,27 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
           },
         });
 
-      const members = groupData.members.map((_userId) => {
-        return transactionalEntityManager.getRepository(Member).create({
-          groupId: group.groupId,
-          userId: _userId,
-          nickName: v6(),
-          roleId: roles.find((role) => role.name === MemberRole.Member)?.roleId, // Gán role Owner cho người tạo
-          status:
-            userWithPrivacy.find((u) => u.userId === _userId)?.userPrivacy
-              .groupJoinMode === UserGroupJoinMode.AutoJoinForFriends
-              ? MemberStatusType.Active
-              : MemberStatusType.Invited,
-        });
-      });
-
+      const members: Member[] = [];
+      for (const _userId of groupData.members) {
+        members.push(
+          transactionalEntityManager.getRepository(Member).create({
+            groupId: group.groupId,
+            userId: _userId,
+            roleId: roles.find((role) => role.name === MemberRole.Member)
+              ?.roleId, // Gán role Owner cho người tạo
+            //FIXME: status mặc định là Active, sau này có thể thay đổi theo logic
+            // status:
+            //   userWithPrivacy.find((u) => u.userId === _userId)?.userPrivacy
+            //     .groupJoinMode === UserGroupJoinMode.AutoJoinForFriends
+            //     ? MemberStatusType.Active
+            //     : MemberStatusType.Invited,
+          })
+        );
+      }
       members.push(
         transactionalEntityManager.getRepository(Member).create({
           groupId: group.groupId,
           userId: userId,
-          nickName: v6(),
           status: MemberStatusType.Active,
           roleId: roles.find((role) => role.name === MemberRole.Owner)?.roleId, // Gán role Owner cho người tạo
         })
@@ -232,30 +463,17 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
 
       // add message as notification for all members
       // 4. Tạo message thông báo cho tất cả thành viên
-      const manipulateMembers: ManipulateMember[] = [];
 
-      let strMessage = "{{@}} created group chat with";
-      manipulateMembers.push(
-        transactionalEntityManager.getRepository(ManipulateMember).create({
-          memberId: _members.find((m) => m.userId === userId)?.memberId,
-        })
-      );
-
-      manipulateMembers.push(
-        ...groupData.members.map((_userId) => {
-          strMessage += " {{@}}";
-          return transactionalEntityManager
-            .getRepository(ManipulateMember)
-            .create({
-              memberId: _members.find((m) => m.userId === _userId)?.memberId,
-            });
-        })
-      );
+      let strMessage = "{{@}} created group chat";
 
       const message = transactionalEntityManager.getRepository(Message).create({
         content: strMessage,
         type: MessageType.Notification,
-        manipulateMembers: manipulateMembers,
+        manipulateMembers: [
+          {
+            memberId: _members.find((m) => m.userId === userId)?.memberId,
+          },
+        ],
         memberId: _members.find((m) => m.userId === userId)?.memberId,
       });
 
@@ -373,22 +591,13 @@ export default class GroupRepository extends BaseRepository<GroupChat> {
     });
   }
 
-  async getLatestMessageId(groupId: number): Promise<number | null> {
-    const result = await this.manager
-      .createQueryBuilder(Message, "message")
-      .leftJoin("message.ownerMember", "messageMember")
-      .select("MAX(message.messageId)", "latestMessageId")
-      .where("messageMember.groupId = :groupId", { groupId })
-      .getRawOne();
-
-    return result?.latestMessageId || null;
-  }
-
-  async getCurrentMember(groupId: number, userId: number): Promise<Member | null> {
+  async getCurrentMember(
+    groupId: number,
+    userId: number
+  ): Promise<Member | null> {
     return await this.manager
       .createQueryBuilder(Member, "member")
       .leftJoinAndSelect("member.user", "user")
-      .leftJoinAndSelect("member.role", "role")
       .where("member.groupId = :groupId AND member.userId = :userId", {
         groupId,
         userId,

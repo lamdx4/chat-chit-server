@@ -1,39 +1,44 @@
 import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    OneToMany,
-    OneToOne,
-    JoinColumn,
-    CreateDateColumn,
-    Index,
-  } from "typeorm";
-  import { PollOption } from "./poll-option.entity";
-  import { Message } from "./message.entity";
-  
-  @Entity("Poll")
-  export class Poll {
-    @PrimaryGeneratedColumn()
-    pollId: number;
-  
-    @Index("UQ_Poll_MessageId", { unique: true })
-    @Column()
-    messageId: number;
-  
-    @Column({ type: "tinyint", default: 0 })
-    isMultipleChoice: boolean;
-  
-    @Column({ type: "datetime", nullable: true })
-    expiredAt?: Date;
-  
-    @CreateDateColumn({ type: "datetime" })
-    createdAt: Date;
-  
-    @OneToMany(() => PollOption, (option) => option.poll)
-    options: PollOption[];
-  
-    @OneToOne(() => Message, (message) => message.poll)
-    @JoinColumn({ name: "messageId" })
-    message: Message;
-  }
-  
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  OneToOne,
+  JoinColumn,
+  CreateDateColumn,
+  Index,
+} from "typeorm";
+import { PollOption } from "./poll-option.entity";
+import { Message } from "./message.entity";
+
+@Entity("Poll")
+export class Poll {
+  @PrimaryGeneratedColumn()
+  pollId: number;
+
+  @Index("UQ_Poll_MessageId", { unique: true })
+  @Column()
+  messageId: number;
+
+  @Column({ type: "tinyint", default: 0 })
+  isMultipleChoice: boolean;
+
+  @Column({ type: "tinyint", default: 0 })
+  isClosed: boolean;
+
+  @Column({ type: "datetime", nullable: true })
+  expiredAt?: Date;
+
+  @CreateDateColumn({ type: "datetime" })
+  createdAt: Date;
+
+  @OneToMany(() => PollOption, (option) => option.poll, {
+    eager: true,
+    cascade: true,
+  })
+  options: PollOption[];
+
+  @OneToOne(() => Message, (message) => message.poll)
+  @JoinColumn({ name: "messageId" })
+  message: Message;
+}

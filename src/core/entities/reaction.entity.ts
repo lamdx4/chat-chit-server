@@ -29,6 +29,7 @@ export class Reaction {
   @JoinColumn({ name: "memberId" })
   @ManyToOne(() => Member, (member) => member.reactions, {
     onDelete: "CASCADE",
+    eager: true,
   })
   member: Member;
 

@@ -7,7 +7,6 @@ import {
 } from "typeorm";
 import { User } from "./user.entity";
 import { GroupChat } from "./group-chat.entity";
-import { Message } from "./message.entity";
 
 @Entity("File")
 export class File {
@@ -27,7 +26,4 @@ export class File {
 
   @OneToOne(() => File, { nullable: true })
   groupAvatar?: GroupChat;
-
-  @OneToOne(() => File, { nullable: true })
-  message?: Message;
 }
