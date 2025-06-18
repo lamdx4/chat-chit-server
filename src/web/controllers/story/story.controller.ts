@@ -211,11 +211,21 @@ export default class StoryController {
   async archiveStory(req: Request, res: Response, next: NextFunction) {
     const userId = req.userId!;
     const { storyId } = req.params;
+    const { status } = req.body;
 
     const validatedStoryId = this.validateStoryId(storyId, res);
     if (validatedStoryId === null) return;
 
-    const result = await this.storyService.archiveStory(validatedStoryId, userId);
+    // Validate status parameter
+    if (status === undefined || status === null || typeof status !== 'boolean') {
+      return res.status(400).json(
+        ResponseData.fail("INVALID_STATUS", {
+          status: ["Status is required and must be a valid boolean."]
+        })
+      );
+    }
+
+    const result = await this.storyService.archiveStory(validatedStoryId, userId, status);
 
     if (result.isSuccess) {
       return res.status(200).json(ResponseData.success(result.data, result.message));

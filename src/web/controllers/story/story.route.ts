@@ -74,7 +74,7 @@ storyRouter.get(
   asyncUtil(storyController.getStoryInteractions.bind(storyController))
 );
 
-storyRouter.post(
+storyRouter.patch(
   "/:storyId/archive",
   authenticateMiddleware,
   asyncUtil(storyController.archiveStory.bind(storyController))

@@ -342,29 +342,19 @@ export default class StoryRepository extends BaseRepository<Story> {
       return results;
     }
 
+
     /**
-     * Archive a story by setting isArchived to 1
+     * Check if a story is archived
      */
-    async archiveStory(storyId: number, userId: number): Promise<boolean> {
+    async changeStoryArchivedStatus(storyId: number, userId: number, isArchived: boolean): Promise<boolean> {
       const result = await this.update(
-        { storyId, ownerId: userId },
-        { isArchived: true }
+      { storyId, ownerId: userId },
+      { isArchived }
       );
       
       return result.affected! > 0;
     }
 
-    /**
-     * Check if a story is archived
-     */
-    async isStoryArchived(storyId: number): Promise<boolean> {
-      const story = await this.findOne({ 
-        where: { storyId, isArchived: true },
-        select: ['storyId'] 
-      });
-      
-      return !!story;
-    }
 
     /**
      * Find a story by its ID

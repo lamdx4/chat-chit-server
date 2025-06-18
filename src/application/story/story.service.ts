@@ -329,31 +329,25 @@ export default class StoryService {
   }
 
   /**
-   * Archive a story by its ID.
-   * @param storyId - The ID of the story to archive
+   * Archive/unarchive a story by its ID.
+   * @param storyId - The ID of the story to archive/unarchive
    * @param userId - The ID of the user who owns the story
+   * @param status - The target status (true for archived, false for unarchived)
    * @returns - Result.ok(true) if successful, Result.fail if error
    */
-  async archiveStory(storyId: number, userId: number): Promise<Result<boolean>> {
+  async archiveStory(storyId: number, userId: number, status: boolean): Promise<Result<boolean>> {
     try {
-      // Check if the story is already archived
-      const isAlreadyArchived = await this.storyRepository.isStoryArchived(storyId);
+      // Archive/unarchive the story to target status
+      const isUpdated = await this.storyRepository.changeStoryArchivedStatus(storyId, userId, status);
       
-      if (isAlreadyArchived) {
-        return Result.ok(true); // Already archived, no need to archive again
-      }
-
-      // Archive the story
-      const isArchived = await this.storyRepository.archiveStory(storyId, userId);
-      
-      if (!isArchived) {
-        return Result.fail(404, "Story not found or you don't have permission to archive it");
+      if (!isUpdated) {
+        return Result.fail(404, "Story not found or you don't have permission to modify it");
       }
       
       return Result.ok(true);
     } catch (error) {
       console.error("StoryService Error:", error);
-      return Result.fail(500, "Failed to archive story due to server error");
+      return Result.fail(500, "Failed to update story archive status due to server error");
     }
   }
 
