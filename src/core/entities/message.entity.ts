@@ -7,10 +7,11 @@ import {
   Index,
   JoinColumn,
   OneToOne,
+  JoinTable,
+  ManyToMany,
 } from "typeorm";
 import { Member } from "./member.entity";
 import { Reaction } from "./reaction.entity";
-import { ManipulateMember } from "./manipulate-member.entity";
 import { File } from "./file.entity";
 import { Poll } from "./poll.entity";
 
@@ -20,6 +21,7 @@ export enum MessageType {
   File = "File",
   Notification = "Notification",
   Contact = "Contact",
+  Poll = "Poll"
 }
 
 export enum MessageStatus {
@@ -35,7 +37,7 @@ export class Message {
   @PrimaryGeneratedColumn({ name: "messageId" })
   messageId: number;
 
-  @Column({ length: 100 })
+  @Column({ length: 250 })
   content: string;
 
   @Column({ type: "datetime", default: () => "CURRENT_TIMESTAMP" })
@@ -56,35 +58,54 @@ export class Message {
   @Column()
   memberId: number;
 
-  @Column({ nullable: true })
-  @Index("FileId")
-  fileId: number;
-
-  @OneToOne(() => File, (file) => file.message, { onDelete: "CASCADE" })
-  @JoinColumn({ name: "avatar" })
-  messageFile: File;
-
-  @ManyToOne(() => Member, (member) => member.messages, { onDelete: "CASCADE" })
+  @ManyToOne(() => Member, (member) => member.messages, {
+    onDelete: "CASCADE",
+    eager: true,
+  })
   @JoinColumn({ name: "memberId" })
   ownerMember?: Member;
 
-  @ManyToOne(() => Message, (message) => message.inverseReplyMessage)
+  @OneToOne(() => Message, {})
   @JoinColumn({ name: "replyMessageId" })
   replyMessage?: Message;
 
-  @OneToMany(() => Message, (message) => message.replyMessage)
-  inverseReplyMessage: Message[];
-
-  @OneToMany(() => Reaction, (reaction) => reaction.message)
+  @OneToMany(() => Reaction, (reaction) => reaction.message, { eager: true })
   reactions: Reaction[];
 
-  @OneToMany(
-    () => ManipulateMember,
-    (manipulateMember) => manipulateMember.message,
-    { cascade: true }
-  )
-  manipulateMembers: ManipulateMember[];
+  @ManyToMany(() => Member, {
+    cascade: true,
+    eager: true,
+  })
+  @JoinTable({
+    name: "ManipulateMember",
+    joinColumn: {
+      name: "messageId",
+      referencedColumnName: "messageId",
+    },
+    inverseJoinColumn: {
+      name: "memberId",
+      referencedColumnName: "memberId",
+    },
+  })
+  manipulateMembers: Member[];
 
-  @OneToOne(() => Poll, (poll) => poll.message)
+  @OneToOne(() => Poll, (poll) => poll.message, { eager: true, cascade: true })
   poll: Poll;
+
+  @ManyToMany(() => File, {
+    cascade: true,
+    eager: true,
+  })
+  @JoinTable({
+    name: "MessageFiles",
+    joinColumn: {
+      name: "messageId",
+      referencedColumnName: "messageId",
+    },
+    inverseJoinColumn: {
+      name: "fileId",
+      referencedColumnName: "fileId",
+    },
+  })
+  files: File[];
 }

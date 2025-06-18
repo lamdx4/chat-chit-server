@@ -1,28 +1,31 @@
-import { Expose, Type, Transform } from 'class-transformer';
-import { GroupChatType, GroupPrivacyType, GroupChatStatusType } from '../../../core/entities/group-chat.entity';
-import { MessageType, MessageStatus } from '../../../core/entities/message.entity';
-import { MemberStatusType } from '../../../core/entities/member.entity';
-import { GenderType } from '../../../core/entities/user.entity';
+import { Expose, Type, Transform } from "class-transformer";
+import {
+  GroupChatType,
+  GroupPrivacyType,
+  GroupChatStatusType,
+} from "../../../core/entities/group-chat.entity";
+import {
+  MessageType,
+  MessageStatus,
+} from "../../../core/entities/message.entity";
+import { MemberStatusType } from "../../../core/entities/member.entity";
+import { GenderType } from "../../../core/entities/user.entity";
+import { TransformUtil } from "../../utils/transform.util";
+import {
+  TransformUrl,
+  TransformUrlFrom,
+} from "../../../shared-kernel/decorators/transform.decorators";
+import { Reaction } from "../../../core/entities/reaction.entity";
+import { E, T } from "@faker-js/faker/dist/airline-BUL6NtOJ";
 
 export class UserDto {
   @Expose()
   userId: number;
 
   @Expose()
-  email?: string | null;
-
-  @Expose()
-  phone: string;
-
-  @Expose()
-  password: string;
-
-  @Expose()
-  birthday?: Date;
-
-  @Expose()
   gender: GenderType;
 
+  @TransformUrl()
   @Expose()
   avatar?: string;
 
@@ -37,15 +40,6 @@ export class UserDto {
 
   @Expose()
   country?: string;
-
-  @Expose()
-  googleAccountId?: string | null;
-
-  @Expose()
-  isActive: boolean;
-
-  @Expose()
-  createdAt: Date;
 }
 
 export class GroupRoleDto {
@@ -56,7 +50,18 @@ export class GroupRoleDto {
   name: string;
 
   @Expose()
-  groupId: number;
+  permission: PermissionDto[];
+}
+
+export class PermissionDto {
+  @Expose()
+  permissionId: number;
+
+  @Expose()
+  name: string;
+
+  @Expose()
+  description: string;
 }
 
 export class MemberDto {
@@ -96,6 +101,23 @@ export class MemberDto {
   role?: GroupRoleDto;
 }
 
+export class PollDto {
+  @Expose()
+  pollId: number;
+
+  @Expose()
+  isMultipleChoice: boolean;
+
+  @Expose()
+  isClosed: boolean;
+
+  @Expose()
+  expiredAt?: Date;
+
+  @Expose()
+  @Type(() => PollOptionDto)
+  options: PollOptionDto[];
+}
 export class MessageDto {
   @Expose()
   messageId: number;
@@ -122,9 +144,6 @@ export class MessageDto {
   memberId: number;
 
   @Expose()
-  fileId?: number;
-
-  @Expose()
   @Type(() => MemberDto)
   ownerMember?: MemberDto;
 
@@ -136,10 +155,33 @@ export class MessageDto {
   @Type(() => MessageDto)
   inverseReplyMessage?: MessageDto[];
 
-  // Legacy field for backward compatibility
   @Expose()
-  @Transform(({ obj }) => obj.ownerMember)
-  sender?: MemberDto;
+  @Type(() => MemberDto)
+  manipulateMembers: MemberDto[];
+
+  @Expose()
+  @Type(() => FileDto)
+  files: FileDto[];
+
+  @Type(() => ReactionDto)
+  @Expose()
+  reactions: ReactionDto[];
+
+  @Expose()
+  @Type(() => PollDto)
+  poll?: PollDto;
+}
+
+export class ReactionDto {
+  @Expose()
+  reactionId: number;
+
+  @Expose()
+  emojiData: string;
+
+  @Expose()
+  @Type(() => MemberDto)
+  member: MemberDto;
 }
 
 export class GroupChatDto {
@@ -155,6 +197,7 @@ export class GroupChatDto {
   @Expose()
   groupChatStatus: GroupChatStatusType;
 
+  @TransformUrl()
   @Expose()
   avatar?: string;
 
@@ -176,7 +219,7 @@ export class GroupChatDto {
   roles?: GroupRoleDto[];
 }
 
-export class GroupListItemDto {
+export class GroupItemDto {
   @Expose()
   groupId: number;
 
@@ -189,6 +232,7 @@ export class GroupListItemDto {
   @Expose()
   groupChatStatus: GroupChatStatusType;
 
+  @TransformUrl()
   @Expose()
   avatar?: string;
 
@@ -207,8 +251,16 @@ export class GroupListItemDto {
   latestMessage?: MessageDto;
 
   @Expose()
-  @Type(() => MemberDto) 
+  @Type(() => MessageDto)
+  messages: MessageDto[];
+
+  @Expose()
+  @Type(() => MemberDto)
   currentMember: MemberDto;
+
+  @Expose()
+  @Type(() => MemberDto)
+  members: MemberDto[];
 
   @Expose()
   @Transform(({ value }) => parseInt(value) || 0)
@@ -221,4 +273,34 @@ export class GroupListItemDto {
   // Additional UI fields
   @Expose()
   memberCount: number;
+
+  @Expose()
+  emoji: string;
+}
+
+export class FileDto {
+  @Expose()
+  fileId: string;
+
+  @Expose()
+  mimeType: string;
+
+  @TransformUrlFrom("fileId")
+  @Expose()
+  url: string;
+}
+
+export class PollOptionDto {
+  @Expose()
+  optionId: number;
+
+  @Expose()
+  text: string;
+
+  @Expose()
+  votedAt: Date;
+
+  @Expose()
+  @Type(() => MemberDto)
+  votedBy: MemberDto[];
 }
