@@ -68,7 +68,7 @@ COPY --from=build /app/dist ./dist
 COPY .env.prod ./.env
 
 # Create uploads directory and set permissions
-RUN mkdir -p uploads && chown -R nodejs:nodejs /app
+RUN mkdir -p /app/dist/uploads && chown -R nodejs:nodejs /app
 
 # Switch to non-root user
 USER nodejs
