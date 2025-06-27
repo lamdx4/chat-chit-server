@@ -64,16 +64,12 @@ RUN yarn install --production --frozen-lockfile && yarn cache clean
 # Copy built application from build stage
 COPY --from=build /app/dist ./dist
 
-# Copy production environment file
-COPY .env.prod ./.env
-
 # Create uploads directory and set permissions
 RUN mkdir -p /app/dist/uploads && chown -R nodejs:nodejs /app
 
 # Switch to non-root user
 USER nodejs
 
-# Expose port (from your .env.prod file)
 EXPOSE 36363
 
 # Health check
