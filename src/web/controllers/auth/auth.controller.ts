@@ -63,6 +63,32 @@ export default class AuthController {
     }
   }
 
+  async loginWithGoogle(req: Request, res: Response, next: NextFunction) {
+    const { code } = req.body;
+    const deviceLoginInfor = `[${new Date()}] [${req.headers["user-agent"]}] [${
+      req.headers["x-forwarded-for"] || req.socket.remoteAddress
+    }]`;
+    const r = await this.authService.loginWithGoogle(code, deviceLoginInfor);
+    if (r.isSuccess) {
+      res
+        .status(HttpStatus.Ok)
+        .json(ResponseData.success(r.data, "Login with Google success"));
+    } else {
+      res.status(r.code).json(ResponseData.fail(r.message, r.errors));
+    }
+  }
+
+  async getLoginUri(req: Request, res: Response, next: NextFunction) {
+    const r = await this.authService.getLoginUri();
+    if (r.isSuccess) {
+      res
+        .status(HttpStatus.Ok)
+        .json(ResponseData.success(r.data, "Get login URI success"));
+    } else {
+      res.status(r.code).json(ResponseData.fail(r.message, r.errors));
+    }
+  }
+
   async login(req: Request, res: Response, next: NextFunction) {
     const deviceLoginInfor = `[${new Date()}] [${req.headers["user-agent"]}] [${
       req.headers["x-forwarded-for"] || req.socket.remoteAddress

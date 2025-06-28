@@ -8,7 +8,8 @@ import { ConfigService } from "../../shared-kernel/env/config-service";
 export interface GoogleOAuth2Setting {
   ClientId: string;
   ClientSecret: string;
-  RedirectUri: string;
+  RedirectLinkAccountUri: string;
+  RedirectLoginUri: string;
 }
 
 export interface TokenResponse {
@@ -21,6 +22,10 @@ export interface GoogleUserInfo {
   email: string;
   name: string;
 }
+export enum ActionGetCodeType {
+  Login,
+  LinkAccount,
+}
 
 export class GoogleOAuthHelper {
   private static readonly httpClient: AxiosInstance = axios.create();
@@ -32,10 +37,22 @@ export class GoogleOAuthHelper {
     });
   }
 
-  public getRedirectUri(userId: number): string {
+  async getRedirectLoginUri() {
     const params = new URLSearchParams({
       client_id: this.options.ClientId,
-      redirect_uri: this.options.RedirectUri,
+      redirect_uri: this.options.RedirectLoginUri,
+      response_type: "code",
+      scope: "profile email",
+      state: "login",
+    });
+
+    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  }
+
+  public getRedirectLinkAccountUri(userId: number): string {
+    const params = new URLSearchParams({
+      client_id: this.options.ClientId,
+      redirect_uri: this.options.RedirectLinkAccountUri,
       response_type: "code",
       scope: "profile email",
       state: userId.toString(),
@@ -44,8 +61,11 @@ export class GoogleOAuthHelper {
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
 
-  public async getUserInfoFromCodeAsync(code: string): Promise<GoogleUserInfo> {
-    const tokenResponse = await this.exchangeCodeForTokensAsync(code);
+  public async getGoogleUserInfoFromCodeAsync(
+    code: string,
+    type: ActionGetCodeType = ActionGetCodeType.LinkAccount
+  ): Promise<GoogleUserInfo> {
+    const tokenResponse = await this.exchangeCodeForTokensAsync(code, type);
 
     if (!tokenResponse.id_token) {
       throw new Error("No id_token returned from Google.");
@@ -56,18 +76,23 @@ export class GoogleOAuthHelper {
 
   // Sửa phương thức exchangeCodeForTokensAsync
   private async exchangeCodeForTokensAsync(
-    code: string
+    code: string,
+    type: ActionGetCodeType = ActionGetCodeType.LinkAccount
   ): Promise<TokenResponse> {
     // Validate code first
     if (!code || code === "undefined") {
       throw new Error("Invalid authorization code");
     }
-
+    const redirectUri =
+      type === ActionGetCodeType.LinkAccount
+        ? this.options.RedirectLinkAccountUri
+        : this.options.RedirectLoginUri;
+    console.log("Redirect URI:", redirectUri);
     const params = new URLSearchParams({
       code,
       client_id: this.options.ClientId,
       client_secret: this.options.ClientSecret,
-      redirect_uri: this.options.RedirectUri,
+      redirect_uri: redirectUri,
       grant_type: "authorization_code",
     });
 

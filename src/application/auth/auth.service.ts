@@ -1,16 +1,59 @@
 import { User } from "../../core/entities/user.entity";
 import UserRepository from "../../infras/data/repository/user.repository";
+import {
+  ActionGetCodeType,
+  GoogleOAuthHelper,
+  GoogleUserInfo,
+} from "../../infras/google-auth/google-oauth-helper";
 import JwtProvider from "../../infras/jwt/jwt-provider";
+import { ConfigService } from "../../shared-kernel/env/config-service";
+import logger from "../../shared-kernel/logger/logger";
 import { Result } from "../../web/utils/result";
 
 export default class AuthService {
   private userRepository: UserRepository;
-
+  private ggHelper: GoogleOAuthHelper;
   private jwtService: JwtProvider;
 
   constructor() {
     this.userRepository = new UserRepository();
     this.jwtService = new JwtProvider();
+    this.ggHelper = new GoogleOAuthHelper({
+      ClientId: ConfigService.tryGet("GOOGLE_CLIENT_ID"),
+      ClientSecret: ConfigService.tryGet("GOOGLE_CLIENT_SECRET"),
+      RedirectLinkAccountUri: ConfigService.tryGet(
+        "GOOGLE_REDIRECT_LINK_ACCOUNT_URI"
+      ),
+      RedirectLoginUri: ConfigService.tryGet("GOOGLE_REDIRECT_LOGIN_URI"),
+    });
+  }
+
+  async loginWithGoogle(code: string, deviceLoginInfor: string) {
+    let token: GoogleUserInfo;
+    try {
+      token = await this.ggHelper.getGoogleUserInfoFromCodeAsync(
+        code,
+        ActionGetCodeType.Login
+      );
+      let user = await this.userRepository.findOne({
+        where: { email: token.email, googleAccountId: token.account_id },
+      });
+      if (user) {
+        const jwtToken = this.jwtService.generateToken({
+          userId: user.userId,
+          phoneNumber: user.phone,
+        });
+        return Result.ok({
+          user,
+          token: jwtToken,
+        });
+      } else {
+        return Result.badRequest("INVALID_GOOGLE_ACCOUNT");
+      }
+    } catch (error) {
+      logger.error("Error while getting user info from Google:", error);
+      return Result.badRequest("INVALID_CODE");
+    }
   }
 
   async changePassword(
@@ -87,6 +130,12 @@ export default class AuthService {
     }
 
     return Result.badRequest("INVALID_INFORMATION_LOGIN");
+  }
+
+  async getLoginUri() {
+    return Result.ok({
+      url: await this.ggHelper.getRedirectLoginUri(),
+    });
   }
 
   logout(userId: number): void {}

@@ -132,7 +132,7 @@ src/
    # Google OAuth (Optional)
    GOOGLE_CLIENT_ID=your_google_client_id
    GOOGLE_CLIENT_SECRET=your_google_client_secret
-   GOOGLE_REDIRECT_URI=http://localhost:5173/u/link-to-google
+   GOOGLE_REDIRECT_LINK_ACCOUNT_URI=http://localhost:5173/u/link-to-google
 
    # AWS S3 Configuration
    AWS_ACCESS_KEY_ID=your_access_key

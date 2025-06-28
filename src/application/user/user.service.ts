@@ -2,7 +2,10 @@ import Stream from "stream";
 import { CloudService } from "../../infras/aws-s3/aws-s3.service";
 import FileRepository from "../../infras/data/repository/file.repository";
 import UserRepository from "../../infras/data/repository/user.repository";
-import { GoogleOAuthHelper } from "../../infras/google-auth/google-oauth-helper";
+import {
+  GoogleOAuthHelper,
+  GoogleUserInfo,
+} from "../../infras/google-auth/google-oauth-helper";
 import { ConfigService } from "../../shared-kernel/env/config-service";
 import { ChangeMyBaseProfileRequest } from "../../web/controllers/user/reqs/change-base-profile.req";
 import { Result } from "../../web/utils/result";
@@ -29,7 +32,10 @@ export default class UserService {
     this.ggHelper = new GoogleOAuthHelper({
       ClientId: ConfigService.tryGet("GOOGLE_CLIENT_ID"),
       ClientSecret: ConfigService.tryGet("GOOGLE_CLIENT_SECRET"),
-      RedirectUri: ConfigService.tryGet("GOOGLE_REDIRECT_URI"),
+      RedirectLinkAccountUri: ConfigService.tryGet(
+        "GOOGLE_REDIRECT_LINK_ACCOUNT_URI"
+      ),
+      RedirectLoginUri: ConfigService.tryGet("GOOGLE_REDIRECT_LOGIN_URI"),
     });
     this.userRepository = new UserRepository();
     this.relationshipRepository = new RelationshipRepository();
@@ -324,9 +330,9 @@ export default class UserService {
     if (!user) {
       return Result.notFound("USER_NOT_FOUND");
     }
-    let token;
+    let token: GoogleUserInfo;
     try {
-      token = await this.ggHelper.getUserInfoFromCodeAsync(code);
+      token = await this.ggHelper.getGoogleUserInfoFromCodeAsync(code);
     } catch (error) {
       console.error("Error while getting user info from Google:", error);
       return Result.badRequest("INVALID_CODE");
@@ -345,7 +351,7 @@ export default class UserService {
 
   async getLinkUrlLogin(userId: number) {
     return Result.ok({
-      url: this.ggHelper.getRedirectUri(userId),
+      url: this.ggHelper.getRedirectLinkAccountUri(userId),
     });
   }
 

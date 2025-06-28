@@ -21,6 +21,16 @@ authRouter.post(
 );
 
 authRouter.post(
+  "/login-with-google",
+  asyncUtil(authController.loginWithGoogle.bind(authController))
+);
+
+authRouter.get(
+  "/login-with-google",
+  asyncUtil(authController.getLoginUri.bind(authController))
+);
+
+authRouter.post(
   "/register",
   registerValidator,
   handleValidationErrors,
